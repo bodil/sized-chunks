@@ -1,0 +1,22 @@
+language: rust
+rust:
+  - stable
+  - beta
+  - nightly
+cache:
+  directories:
+    - /home/travis/.rustup
+    - /home/travis/.cargo
+    - /home/travis/target
+
+install:
+  - rustup update
+  - mkdir -p .cargo && echo '[build]' > .cargo/config && echo 'target-dir = "/home/travis/target"' >> .cargo/config
+
+matrix:
+  include:
+    - env: CLIPPY=1
+      rust: stable
+      install:
+        - rustup component add clippy; true
+      script: cargo clippy -- -D warnings

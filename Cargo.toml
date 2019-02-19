@@ -1,0 +1,22 @@
+[package]
+name = "sized-chunks"
+version = "0.1.0"
+authors = ["Bodil Stokke <bodil@bodil.org>"]
+edition = "2018"
+license = "MPL-2.0+"
+description = "Efficient sized chunk datatypes"
+repository = "https://github.com/bodil/sized-chunks"
+documentation = "http://docs.rs/sized-chunks"
+readme = "./README.md"
+categories = ["data-structures"]
+keywords = ["sparse-array"]
+exclude = ["release.toml", "proptest-regressions/**"]
+
+[badges]
+travis-ci = { repository = "bodil/sized-chunks" }
+
+[dependencies]
+typenum = "1.10.0"
+
+[dev-dependencies]
+proptest = "0.9.1"
