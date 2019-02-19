@@ -8,8 +8,8 @@ pub mod sparse_chunk;
 pub mod types;
 
 #[doc(inline)]
-pub use bitmap::Bitmap;
+pub use crate::bitmap::Bitmap;
 #[doc(inline)]
-pub use sized_chunk::Chunk;
+pub use crate::sized_chunk::Chunk;
 #[doc(inline)]
-pub use sparse_chunk::SparseChunk;
+pub use crate::sparse_chunk::SparseChunk;
