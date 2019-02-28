@@ -3,6 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 pub mod bitmap;
+pub mod ring_buffer;
 pub mod sized_chunk;
 pub mod sparse_chunk;
 pub mod types;
@@ -12,6 +13,8 @@ mod tests;
 
 #[doc(inline)]
 pub use crate::bitmap::Bitmap;
+#[doc(inline)]
+pub use crate::ring_buffer::RingBuffer;
 #[doc(inline)]
 pub use crate::sized_chunk::Chunk;
 #[doc(inline)]

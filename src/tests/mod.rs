@@ -1,3 +1,4 @@
+mod ring_buffer;
 mod sized_chunk;
 mod sparse_chunk;
 

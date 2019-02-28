@@ -15,6 +15,10 @@ Versioning](http://semver.org/spec/v2.0.0.html).
 
 ### ADDED
 
+- There is now a `RingBuffer` implementation, which should be nearly a drop-in
+  replacement for `SizedChunk` but is always O(1) on push and cannot be
+  dereferenced to slices (but it has a set of custom slice-like implementations
+  to make that less of a drawback).
 - The `Drain` iterator for `SizedChunk` now implements `DoubleEndedIterator`.
 
 ### FIXED
