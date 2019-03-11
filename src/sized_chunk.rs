@@ -493,8 +493,8 @@ where
         debug_assert!(self_len + count <= N::USIZE);
         debug_assert!(other_len >= count);
         if self.left < count {
-            self.left = N::USIZE - self.right;
-            unsafe { Chunk::force_copy(0, self.left, self.right, self) };
+            unsafe { Chunk::force_copy(self.left, N::USIZE - self_len, self_len, self) };
+            self.left = N::USIZE - self_len;
             self.right = N::USIZE;
         }
         unsafe { Chunk::force_copy_to(other.right - count, self.left - count, count, other, self) };
