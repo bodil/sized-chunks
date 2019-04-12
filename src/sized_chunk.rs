@@ -667,13 +667,14 @@ where
     }
 }
 
-impl<A, N> PartialEq for Chunk<A, N>
+impl<A, N, Slice> PartialEq<Slice> for Chunk<A, N>
 where
+    Slice: Borrow<[A]>,
     A: PartialEq,
     N: ChunkLength<A>,
 {
-    fn eq(&self, other: &Self) -> bool {
-        self.len() == other.len() && self.iter().eq(other.iter())
+    fn eq(&self, other: &Slice) -> bool {
+        self.as_slice() == other.borrow()
     }
 }
 
