@@ -6,6 +6,20 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic
 Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### ADDED
+
+- `Chunk` now has `PartialEq` defined for anything that can be borrowed as a
+  slice.
+- `Chunk` has a new method `capacity()` which returns its maximum capacity (the
+  number in the type) as a usize.
+
+### FIXED
+
+- Extensive integration tests were added for `Chunk`.
+- `Chunk::clear` is now very slightly faster.
+
 ## [0.1.2] - 2019-03-11
 
 ### FIXED
