@@ -10,6 +10,7 @@ Versioning](http://semver.org/spec/v2.0.0.html).
 
 ### ADDED
 
+- `SparseChunk` now has a default length of `U64`.
 - `Chunk` now has `PartialEq` defined for anything that can be borrowed as a
   slice.
 - `Chunk` has a new method `capacity()` which returns its maximum capacity (the

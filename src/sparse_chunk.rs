@@ -12,6 +12,8 @@ use std::ops::IndexMut;
 use std::ptr;
 use std::slice::{from_raw_parts, from_raw_parts_mut};
 
+use typenum::U64;
+
 use crate::bitmap::{Bitmap, Iter as BitmapIter};
 use crate::types::{Bits, ChunkLength};
 
@@ -52,7 +54,7 @@ use crate::types::{Bits, ChunkLength};
 /// ```
 ///
 /// [Unsigned]: https://docs.rs/typenum/1.10.0/typenum/marker_traits/trait.Unsigned.html
-pub struct SparseChunk<A, N: Bits + ChunkLength<A>> {
+pub struct SparseChunk<A, N: Bits + ChunkLength<A> = U64> {
     map: Bitmap<N>,
     data: ManuallyDrop<N::SizedType>,
 }
