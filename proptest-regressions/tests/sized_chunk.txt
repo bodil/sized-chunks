@@ -1,0 +1,9 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc c6400035ce2c932a234174d17724f6630d9aa38b1a0908a2757c6ba8eac6159b # shrinks to cons = FromBack([], 0)
+cc 9f0b6f83a6ebf03af4b559442bfa6ec9763814b97c5cbfc9c9d940de948ada6b # shrinks to cons = DrainFrom(InputVec([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])), actions = [PushFront(0), PushFront(0), PushFront(0), PushFront(0), PushFront(0), PushFront(0), PushFront(0), PushFront(0), PushFront(0), PushFront(0)]
+cc 5c46cc6b716f841511a6d6538676ad2ca4293005ed998e37f0d8cbfd7d290004 # shrinks to cons = Single(0), actions = [Append(FromFront(InputVec([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]), 12970592535785856016)), Append(DrainFrom(InputVec([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])))]

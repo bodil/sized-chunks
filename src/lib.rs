@@ -7,6 +7,9 @@ pub mod sized_chunk;
 pub mod sparse_chunk;
 pub mod types;
 
+#[cfg(test)]
+mod tests;
+
 #[doc(inline)]
 pub use crate::bitmap::Bitmap;
 #[doc(inline)]

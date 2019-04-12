@@ -233,6 +233,12 @@ where
         self.right - self.left
     }
 
+    /// Get the capacity of the chunk.
+    #[inline]
+    pub fn capacity(&self) -> usize {
+        N::USIZE
+    }
+
     /// Test if the chunk is empty.
     #[inline]
     pub fn is_empty(&self) -> bool {
