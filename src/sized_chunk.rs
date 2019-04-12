@@ -583,7 +583,9 @@ where
     ///
     /// Time: O(n)
     pub fn clear(&mut self) {
-        self.drop_right(0);
+        for i in self.left..self.right {
+            unsafe { Chunk::force_drop(i, self) }
+        }
         self.left = 0;
         self.right = 0;
     }
