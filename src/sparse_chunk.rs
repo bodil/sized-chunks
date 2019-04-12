@@ -6,6 +6,8 @@
 //!
 //! See [`SparseChunk`](struct.SparseChunk.html)
 
+use std::collections::{BTreeMap, HashMap};
+use std::fmt::{Debug, Error, Formatter};
 use std::mem::{self, ManuallyDrop};
 use std::ops::Index;
 use std::ops::IndexMut;
@@ -149,6 +151,12 @@ impl<A, N: Bits + ChunkLength<A>> SparseChunk<A, N> {
         self.map.len()
     }
 
+    /// Get the capacity of a chunk of this type.
+    #[inline]
+    pub fn capacity() -> usize {
+        N::USIZE
+    }
+
     /// Test if the chunk is empty.
     #[inline]
     pub fn is_empty(&self) -> bool {
@@ -253,6 +261,12 @@ impl<A, N: Bits + ChunkLength<A>> SparseChunk<A, N> {
     pub fn drain(self) -> Drain<A, N> {
         Drain { chunk: self }
     }
+
+    /// Make an iterator of pairs of indices and references to the values
+    /// contained in the array.
+    pub fn entries(&self) -> impl Iterator<Item = (usize, &A)> {
+        self.indices().zip(self.iter())
+    }
 }
 
 impl<A, N: Bits + ChunkLength<A>> Index<usize> for SparseChunk<A, N> {
@@ -278,6 +292,78 @@ impl<A, N: Bits + ChunkLength<A>> IntoIterator for SparseChunk<A, N> {
     #[inline]
     fn into_iter(self) -> Self::IntoIter {
         self.drain()
+    }
+}
+
+impl<A, N> PartialEq for SparseChunk<A, N>
+where
+    A: PartialEq,
+    N: Bits + ChunkLength<A>,
+{
+    fn eq(&self, other: &Self) -> bool {
+        if self.len() != other.len() {
+            return false;
+        }
+        for index in self.indices() {
+            if self.get(index) != other.get(index) {
+                return false;
+            }
+        }
+        true
+    }
+}
+
+impl<A, N> PartialEq<BTreeMap<usize, A>> for SparseChunk<A, N>
+where
+    A: PartialEq,
+    N: Bits + ChunkLength<A>,
+{
+    fn eq(&self, other: &BTreeMap<usize, A>) -> bool {
+        if self.len() != other.len() {
+            return false;
+        }
+        for index in 0..N::USIZE {
+            if self.get(index) != other.get(&index) {
+                return false;
+            }
+        }
+        true
+    }
+}
+
+impl<A, N> PartialEq<HashMap<usize, A>> for SparseChunk<A, N>
+where
+    A: PartialEq,
+    N: Bits + ChunkLength<A>,
+{
+    fn eq(&self, other: &HashMap<usize, A>) -> bool {
+        if self.len() != other.len() {
+            return false;
+        }
+        for index in 0..N::USIZE {
+            if self.get(index) != other.get(&index) {
+                return false;
+            }
+        }
+        true
+    }
+}
+
+impl<A, N> Eq for SparseChunk<A, N>
+where
+    A: Eq,
+    N: Bits + ChunkLength<A>,
+{
+}
+
+impl<A, N> Debug for SparseChunk<A, N>
+where
+    A: Debug,
+    N: Bits + ChunkLength<A>,
+{
+    fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
+        f.write_str("SparseChunk")?;
+        f.debug_map().entries(self.entries()).finish()
     }
 }
 

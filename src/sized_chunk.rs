@@ -233,9 +233,9 @@ where
         self.right - self.left
     }
 
-    /// Get the capacity of the chunk.
+    /// Get the capacity of a chunk of this type.
     #[inline]
-    pub fn capacity(&self) -> usize {
+    pub fn capacity() -> usize {
         N::USIZE
     }
 

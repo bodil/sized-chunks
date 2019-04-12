@@ -13,12 +13,17 @@ Versioning](http://semver.org/spec/v2.0.0.html).
 - `SparseChunk` now has a default length of `U64`.
 - `Chunk` now has `PartialEq` defined for anything that can be borrowed as a
   slice.
-- `Chunk` has a new method `capacity()` which returns its maximum capacity (the
-  number in the type) as a usize.
+- `SparseChunk<A>` likewise has `PartialEq` defined for `BTreeMap<usize, A>` and
+  `HashMap<usize, A>`. These are intended for debugging and aren't optimally
+  `efficient.
+- `Chunk` and `SparseChunk` now have a new method `capacity()` which returns its
+  maximum capacity (the number in the type) as a usize.
+- Added an `entries()` method to `SparseChunk`.
+- `SparseChunk` now has a `Debug` implementation.
 
 ### FIXED
 
-- Extensive integration tests were added for `Chunk`.
+- Extensive integration tests were added for `Chunk` and `SparseChunk`.
 - `Chunk::clear` is now very slightly faster.
 
 ## [0.1.2] - 2019-03-11

@@ -152,7 +152,8 @@ proptest! {
     }
 
     #[test]
-    fn test_actions(cons: Construct<u32>, actions in vec(any::<Action<u32>>(), 0..100)) {
+    fn test_actions(cons: Construct<u32>, actions in vec(any::<Action<u32>>(), 0..super::action_count())) {
+        let capacity = Chunk::<u32>::capacity();
         let mut chunk = cons.make();
         let mut guide: Vec<_> = chunk.iter().cloned().collect();
         for action in actions {
@@ -215,7 +216,7 @@ proptest! {
                 Action::Append(other) => {
                     let mut other = other.make();
                     let mut other_guide: Vec<_> = other.iter().cloned().collect();
-                    if other.len() + chunk.len() > chunk.capacity() {
+                    if other.len() + chunk.len() > capacity {
                         assert!(catch_unwind(AssertUnwindSafe(|| chunk.append(&mut other))).is_err());
                     } else {
                         chunk.append(&mut other);
@@ -225,7 +226,7 @@ proptest! {
                 Action::DrainFromFront(other, count) => {
                     let mut other = other.make();
                     let mut other_guide: Vec<_> = other.iter().cloned().collect();
-                    if count >= other.len() || chunk.len() + count > chunk.capacity() {
+                    if count >= other.len() || chunk.len() + count > capacity {
                         assert!(catch_unwind(AssertUnwindSafe(|| chunk.drain_from_front(&mut other, count))).is_err());
                     } else {
                         chunk.drain_from_front(&mut other, count);
@@ -236,7 +237,7 @@ proptest! {
                 Action::DrainFromBack(other, count) => {
                     let mut other = other.make();
                     let mut other_guide: Vec<_> = other.iter().cloned().collect();
-                    if count >= other.len() || chunk.len() + count > chunk.capacity() {
+                    if count >= other.len() || chunk.len() + count > capacity {
                         assert!(catch_unwind(AssertUnwindSafe(|| chunk.drain_from_back(&mut other, count))).is_err());
                     } else {
                         chunk.drain_from_back(&mut other, count);
@@ -279,7 +280,7 @@ proptest! {
                 }
             }
             assert_eq!(chunk, guide);
-            assert!(guide.len() <= chunk.capacity());
+            assert!(guide.len() <= capacity);
         }
     }
 }
