@@ -470,8 +470,8 @@ where
     pub fn drain_from_front(&mut self, other: &mut Self, count: usize) {
         let self_len = self.len();
         let other_len = other.len();
-        debug_assert!(self_len + count <= N::USIZE);
-        debug_assert!(other_len >= count);
+        assert!(self_len + count <= N::USIZE);
+        assert!(other_len >= count);
         if self.right + count > N::USIZE {
             unsafe { Chunk::force_copy(self.left, 0, self_len, self) };
             self.right -= self.left;
@@ -492,8 +492,8 @@ where
     pub fn drain_from_back(&mut self, other: &mut Self, count: usize) {
         let self_len = self.len();
         let other_len = other.len();
-        debug_assert!(self_len + count <= N::USIZE);
-        debug_assert!(other_len >= count);
+        assert!(self_len + count <= N::USIZE);
+        assert!(other_len >= count);
         if self.left < count {
             unsafe { Chunk::force_copy(self.left, N::USIZE - self_len, self_len, self) };
             self.left = N::USIZE - self_len;
