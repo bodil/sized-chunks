@@ -133,6 +133,8 @@ impl<A, N> Chunk<A, N>
 where
     N: ChunkLength<A>,
 {
+    pub const CAPACITY: usize = N::USIZE;
+
     /// Construct a new empty chunk.
     pub fn new() -> Self {
         let mut chunk: Self;
@@ -231,12 +233,6 @@ where
     #[inline]
     pub fn len(&self) -> usize {
         self.right - self.left
-    }
-
-    /// Get the capacity of a chunk of this type.
-    #[inline]
-    pub fn capacity() -> usize {
-        N::USIZE
     }
 
     /// Test if the chunk is empty.

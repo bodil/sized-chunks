@@ -81,7 +81,12 @@ impl<A: Clone, N: Bits + ChunkLength<A>> Clone for SparseChunk<A, N> {
     }
 }
 
-impl<A, N: Bits + ChunkLength<A>> SparseChunk<A, N> {
+impl<A, N> SparseChunk<A, N>
+where
+    N: Bits + ChunkLength<A>,
+{
+    pub const CAPACITY: usize = N::USIZE;
+
     #[inline]
     fn values(&self) -> &[A] {
         unsafe {
@@ -149,12 +154,6 @@ impl<A, N: Bits + ChunkLength<A>> SparseChunk<A, N> {
     #[inline]
     pub fn len(&self) -> usize {
         self.map.len()
-    }
-
-    /// Get the capacity of a chunk of this type.
-    #[inline]
-    pub fn capacity() -> usize {
-        N::USIZE
     }
 
     /// Test if the chunk is empty.

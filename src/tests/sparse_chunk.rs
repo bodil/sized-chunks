@@ -36,7 +36,7 @@ where
                 out
             }
             Construct::Single((index, value)) => {
-                let index = index % SparseChunk::<A>::capacity();
+                let index = index % SparseChunk::<A>::CAPACITY;
                 let out = SparseChunk::unit(index, value.clone());
                 let mut guide = BTreeMap::new();
                 guide.insert(index, value);
@@ -44,8 +44,8 @@ where
                 out
             }
             Construct::Pair((left_index, left, right_index, right)) => {
-                let left_index = left_index % SparseChunk::<A>::capacity();
-                let right_index = right_index % SparseChunk::<A>::capacity();
+                let left_index = left_index % SparseChunk::<A>::CAPACITY;
+                let right_index = right_index % SparseChunk::<A>::CAPACITY;
                 let out = SparseChunk::pair(left_index, left.clone(), right_index, right.clone());
                 let mut guide = BTreeMap::new();
                 guide.insert(left_index, left);
@@ -65,7 +65,7 @@ proptest! {
 
     #[test]
     fn test_actions(cons: Construct<u32>, actions in vec(any::<Action<u32>>(), 0..super::action_count())) {
-        let capacity = SparseChunk::<u32>::capacity();
+        let capacity = SparseChunk::<u32>::CAPACITY;
         let mut chunk = cons.make();
         let mut guide: BTreeMap<_, _> = chunk.entries().map(|(i, v)| (i, *v)).collect();
         for action in actions {
@@ -93,7 +93,7 @@ proptest! {
                 }
             }
             assert_eq!(chunk, guide);
-            assert!(guide.len() <= SparseChunk::<u32>::capacity());
+            assert!(guide.len() <= SparseChunk::<u32>::CAPACITY);
         }
     }
 }

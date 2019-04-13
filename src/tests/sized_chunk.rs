@@ -27,7 +27,7 @@ where
     type Strategy = BoxedStrategy<InputVec<A>>;
     fn arbitrary_with(_: Self::Parameters) -> Self::Strategy {
         #[allow(clippy::redundant_closure)]
-        proptest::collection::vec(any::<A>(), 0..64)
+        proptest::collection::vec(any::<A>(), 0..Chunk::<u32>::CAPACITY)
             .prop_map(|v| InputVec(v))
             .boxed()
     }
@@ -153,7 +153,7 @@ proptest! {
 
     #[test]
     fn test_actions(cons: Construct<u32>, actions in vec(any::<Action<u32>>(), 0..super::action_count())) {
-        let capacity = Chunk::<u32>::capacity();
+        let capacity = Chunk::<u32>::CAPACITY;
         let mut chunk = cons.make();
         let mut guide: Vec<_> = chunk.iter().cloned().collect();
         for action in actions {
