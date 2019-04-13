@@ -6,6 +6,22 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic
 Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### CHANGED
+
+- The `capacity()` method has been replacied with a `CAPACITY` const on each
+  type.
+
+### ADDED
+
+- The `Drain` iterator for `SizedChunk` now implements `DoubleEndedIterator`.
+
+### FIXED
+
+- `SizedChunk::drain_from_front/back` will now always panic if the iterator
+  underflows, instead of only doing it in debug mode.
+
 ## [0.1.3] - 2019-04-12
 
 ### ADDED
