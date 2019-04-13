@@ -931,6 +931,20 @@ where
     }
 }
 
+impl<'a, A, N> DoubleEndedIterator for Drain<'a, A, N>
+where
+    A: 'a,
+    N: ChunkLength<A> + 'a,
+{
+    fn next_back(&mut self) -> Option<Self::Item> {
+        if self.chunk.is_empty() {
+            None
+        } else {
+            Some(self.chunk.pop_back())
+        }
+    }
+}
+
 impl<'a, A, N> ExactSizeIterator for Drain<'a, A, N>
 where
     A: 'a,
