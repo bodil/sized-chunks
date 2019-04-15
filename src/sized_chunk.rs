@@ -62,11 +62,11 @@ use crate::types::ChunkLength;
 /// ## Isn't this just a less efficient ring buffer?
 ///
 /// You might be wondering why you would want to use this data structure rather
-/// than a [ring buffer], which is similar but doesn't need to shift its content
-/// around when it hits the sides of the allocated buffer. The answer is that
-/// `Chunk` can be dereferenced into a slice, while a ring buffer can not. If
-/// you don't need to be able to do that, a ring buffer will generally be the
-/// more efficient choice.
+/// than a [`RingBuffer`][RingBuffer], which is similar but doesn't need to
+/// shift its content around when it hits the sides of the allocated buffer. The
+/// answer is that `Chunk` can be dereferenced into a slice, while a ring buffer
+/// can not. If you don't need to be able to do that, a ring buffer will
+/// generally be the marginally more efficient choice.
 ///
 /// # Examples
 ///
@@ -90,7 +90,7 @@ use crate::types::ChunkLength;
 ///
 /// [Unsigned]: https://docs.rs/typenum/1.10.0/typenum/marker_traits/trait.Unsigned.html
 /// [im::Vector]: https://docs.rs/im/latest/im/vector/enum.Vector.html
-/// [ring buffer]: https://en.wikipedia.org/wiki/Circular_buffer
+/// [RingBuffer]: ../ring_buffer/struct.RingBuffer.html
 pub struct Chunk<A, N = U64>
 where
     N: ChunkLength<A>,

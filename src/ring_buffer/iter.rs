@@ -8,6 +8,7 @@ use crate::types::ChunkLength;
 
 use super::{index::RawIndex, RingBuffer};
 
+/// A reference iterator over a `RingBuffer`.
 pub struct Iter<'a, A, N>
 where
     N: ChunkLength<A>,
@@ -58,6 +59,7 @@ impl<'a, A, N> ExactSizeIterator for Iter<'a, A, N> where N: ChunkLength<A> {}
 
 impl<'a, A, N> FusedIterator for Iter<'a, A, N> where N: ChunkLength<A> {}
 
+/// A mutable reference iterator over a `RingBuffer`.
 pub struct IterMut<'a, A, N>
 where
     N: ChunkLength<A>,
@@ -108,6 +110,7 @@ impl<'a, A, N> ExactSizeIterator for IterMut<'a, A, N> where N: ChunkLength<A> {
 
 impl<'a, A, N> FusedIterator for IterMut<'a, A, N> where N: ChunkLength<A> {}
 
+/// A draining iterator over a `RingBuffer`.
 pub struct Drain<'a, A: 'a, N: ChunkLength<A> + 'a> {
     pub(crate) buffer: &'a mut RingBuffer<A, N>,
 }
@@ -138,6 +141,7 @@ impl<'a, A: 'a, N: ChunkLength<A> + 'a> ExactSizeIterator for Drain<'a, A, N> {}
 
 impl<'a, A: 'a, N: ChunkLength<A> + 'a> FusedIterator for Drain<'a, A, N> {}
 
+/// A consuming iterator over a `RingBuffer`.
 pub struct OwnedIter<A, N: ChunkLength<A>> {
     pub(crate) buffer: RingBuffer<A, N>,
 }

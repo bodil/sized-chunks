@@ -16,27 +16,28 @@ use crate::types::ChunkLength;
 
 use super::{Iter, IterMut, RingBuffer};
 
+/// An indexable representation of a subset of a `RingBuffer`.
 pub struct Slice<'a, A: 'a, N: ChunkLength<A> + 'a> {
     pub(crate) buffer: &'a RingBuffer<A, N>,
     pub(crate) range: Range<usize>,
 }
 
 impl<'a, A: 'a, N: ChunkLength<A> + 'a> Slice<'a, A, N> {
-    /// Get the length of the ring buffer.
+    /// Get the length of the slice.
     #[inline]
     #[must_use]
     pub fn len(&self) -> usize {
         self.range.end - self.range.start
     }
 
-    /// Test if the ring buffer is empty.
+    /// Test if the slice is empty.
     #[inline]
     #[must_use]
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
 
-    /// Get the value at a given index.
+    /// Get a reference to the value at a given index.
     #[inline]
     #[must_use]
     pub fn get(&self, index: usize) -> Option<&A> {
@@ -47,14 +48,14 @@ impl<'a, A: 'a, N: ChunkLength<A> + 'a> Slice<'a, A, N> {
         }
     }
 
-    /// Get the first value in the buffer.
+    /// Get a reference to the first value in the slice.
     #[inline]
     #[must_use]
     pub fn first(&self) -> Option<&A> {
         self.get(0)
     }
 
-    /// Get the last value in the buffer.
+    /// Get a reference to the last value in the slice.
     #[inline]
     #[must_use]
     pub fn last(&self) -> Option<&A> {
@@ -65,6 +66,7 @@ impl<'a, A: 'a, N: ChunkLength<A> + 'a> Slice<'a, A, N> {
         }
     }
 
+    /// Get an iterator over references to the items in the slice in order.
     #[inline]
     #[must_use]
     pub fn iter(&self) -> Iter<A, N> {
@@ -76,6 +78,10 @@ impl<'a, A: 'a, N: ChunkLength<A> + 'a> Slice<'a, A, N> {
         }
     }
 
+    /// Create a subslice of this slice.
+    ///
+    /// This consumes the slice. To create a subslice without consuming it,
+    /// clone it first: `my_slice.clone().slice(1..2)`.
     #[must_use]
     pub fn slice<R: RangeBounds<usize>>(self, range: R) -> Slice<'a, A, N> {
         let new_range = Range {
@@ -102,6 +108,7 @@ impl<'a, A: 'a, N: ChunkLength<A> + 'a> Slice<'a, A, N> {
         }
     }
 
+    /// Split the slice into two subslices at the given index.
     #[must_use]
     pub fn split_at(self, index: usize) -> (Slice<'a, A, N>, Slice<'a, A, N>) {
         if index > self.len() {
@@ -126,6 +133,7 @@ impl<'a, A: 'a, N: ChunkLength<A> + 'a> Slice<'a, A, N> {
         )
     }
 
+    /// Construct a new `RingBuffer` by copying the elements in this slice.
     #[inline]
     #[must_use]
     pub fn to_owned(&self) -> RingBuffer<A, N>
@@ -238,6 +246,7 @@ impl<'a, 'b, A: 'a, N: ChunkLength<A> + 'a> IntoIterator for &'a Slice<'a, A, N>
 
 // Mutable slice
 
+/// An indexable representation of a mutable subset of a `RingBuffer`.
 pub struct SliceMut<'a, A: 'a, N: ChunkLength<A> + 'a> {
     pub(crate) buffer: &'a mut RingBuffer<A, N>,
     pub(crate) range: Range<usize>,
@@ -268,7 +277,7 @@ impl<'a, A: 'a, N: ChunkLength<A> + 'a> SliceMut<'a, A, N> {
         self.len() == 0
     }
 
-    /// Get the value at a given index.
+    /// Get a reference to the value at a given index.
     #[inline]
     #[must_use]
     pub fn get(&self, index: usize) -> Option<&A> {
@@ -290,7 +299,7 @@ impl<'a, A: 'a, N: ChunkLength<A> + 'a> SliceMut<'a, A, N> {
         }
     }
 
-    /// Get the first value in the slice.
+    /// Get a reference to the first value in the slice.
     #[inline]
     #[must_use]
     pub fn first(&self) -> Option<&A> {
@@ -304,7 +313,7 @@ impl<'a, A: 'a, N: ChunkLength<A> + 'a> SliceMut<'a, A, N> {
         self.get_mut(0)
     }
 
-    /// Get the last value in the slice.
+    /// Get a reference to the last value in the slice.
     #[inline]
     #[must_use]
     pub fn last(&self) -> Option<&A> {
@@ -326,6 +335,7 @@ impl<'a, A: 'a, N: ChunkLength<A> + 'a> SliceMut<'a, A, N> {
         }
     }
 
+    /// Get an iterator over references to the items in the slice in order.
     #[inline]
     #[must_use]
     pub fn iter(&self) -> Iter<A, N> {
@@ -337,6 +347,8 @@ impl<'a, A: 'a, N: ChunkLength<A> + 'a> SliceMut<'a, A, N> {
         }
     }
 
+    /// Get an iterator over mutable references to the items in the slice in
+    /// order.
     #[inline]
     #[must_use]
     pub fn iter_mut(&mut self) -> IterMut<A, N> {
@@ -350,6 +362,11 @@ impl<'a, A: 'a, N: ChunkLength<A> + 'a> SliceMut<'a, A, N> {
         }
     }
 
+    /// Create a subslice of this slice.
+    ///
+    /// This consumes the slice. Because the slice works like a mutable
+    /// reference, you can only have one slice over a given subset of a
+    /// `RingBuffer` at any one time, sothat's just how it's got to be.
     #[must_use]
     pub fn slice<R: RangeBounds<usize>>(self, range: R) -> SliceMut<'a, A, N> {
         let new_range = Range {
@@ -376,6 +393,7 @@ impl<'a, A: 'a, N: ChunkLength<A> + 'a> SliceMut<'a, A, N> {
         }
     }
 
+    /// Split the slice into two subslices at the given index.
     #[must_use]
     pub fn split_at(self, index: usize) -> (SliceMut<'a, A, N>, SliceMut<'a, A, N>) {
         if index > self.len() {
@@ -414,6 +432,7 @@ impl<'a, A: 'a, N: ChunkLength<A> + 'a> SliceMut<'a, A, N> {
         }
     }
 
+    /// Construct a new `RingBuffer` by copying the elements in this slice.
     #[inline]
     #[must_use]
     pub fn to_owned(&self) -> RingBuffer<A, N>

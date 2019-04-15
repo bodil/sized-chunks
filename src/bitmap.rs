@@ -120,6 +120,7 @@ impl<Size: Bits> IntoIterator for Bitmap<Size> {
     }
 }
 
+/// An iterator over the indices in a bitmap which are `true`.
 pub struct Iter<Size: Bits> {
     index: usize,
     data: Size::Store,

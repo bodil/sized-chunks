@@ -28,6 +28,30 @@ pub use iter::{Drain, Iter, IterMut, OwnedIter};
 mod slice;
 pub use slice::{Slice, SliceMut};
 
+/// A fixed capacity ring buffer.
+///
+/// A ring buffer is an array where the first logical index is at some arbitrary
+/// location inside the array, and the indices wrap around to the start of the
+/// array once they overflow its bounds.
+///
+/// This gives us the ability to push to either the front or the end of the
+/// array in constant time, at the cost of losing the ability to get a single
+/// contiguous slice reference to the contents.
+///
+/// It differs from the [`Chunk`][Chunk] in that the latter will have mostly
+/// constant time pushes, but may occasionally need to shift its contents around
+/// to make room. They both have constant time pop, and they both have linear
+/// time insert and remove.
+///
+/// The `RingBuffer` offers its own [`Slice`][Slice] and [`SliceMut`][SliceMut]
+/// types to compensate for the loss of being able to take a slice, but they're
+/// somewhat less efficient, so the general rule should be that you shouldn't
+/// choose a `RingBuffer` if you really need to take slices - but if you don't,
+/// it's probably a marginally better choice overall than [`Chunk`][Chunk].
+///
+/// [Chunk]: ../sized_chunk/struct.Chunk.html
+/// [Slice]: struct.Slice.html
+/// [SliceMut]: struct.SliceMut.html
 pub struct RingBuffer<A, N = U64>
 where
     N: ChunkLength<A>,
@@ -52,6 +76,7 @@ impl<A, N> RingBuffer<A, N>
 where
     N: ChunkLength<A>,
 {
+    /// The capacity of this ring buffer, as a `usize`.
     pub const CAPACITY: usize = N::USIZE;
 
     /// Get the raw index for a logical index.
@@ -274,6 +299,8 @@ where
         self.len() == Self::CAPACITY
     }
 
+    /// Get an iterator over references to the items in the ring buffer in
+    /// order.
     #[inline]
     #[must_use]
     pub fn iter(&self) -> Iter<'_, A, N> {
@@ -285,6 +312,8 @@ where
         }
     }
 
+    /// Get an iterator over mutable references to the items in the ring buffer
+    /// in order.
     #[inline]
     #[must_use]
     pub fn iter_mut(&mut self) -> IterMut<'_, A, N> {
@@ -316,6 +345,7 @@ where
         new_range
     }
 
+    /// Get a `Slice` for a subset of the ring buffer.
     #[must_use]
     pub fn slice<R: RangeBounds<usize>>(&self, range: R) -> Slice<A, N> {
         Slice {
@@ -324,6 +354,7 @@ where
         }
     }
 
+    /// Get a `SliceMut` for a subset of the ring buffer.
     #[must_use]
     pub fn slice_mut<R: RangeBounds<usize>>(&mut self, range: R) -> SliceMut<A, N> {
         SliceMut {
@@ -332,7 +363,7 @@ where
         }
     }
 
-    /// Get the value at a given index.
+    /// Get a reference to the value at a given index.
     #[must_use]
     pub fn get(&self, index: usize) -> Option<&A> {
         if index >= self.len() {
@@ -352,7 +383,7 @@ where
         }
     }
 
-    /// Get the first value in the buffer.
+    /// Get a reference to the first value in the buffer.
     #[inline]
     #[must_use]
     pub fn first(&self) -> Option<&A> {
@@ -366,7 +397,7 @@ where
         self.get_mut(0)
     }
 
-    /// Get the last value in the buffer.
+    /// Get a reference to the last value in the buffer.
     #[inline]
     #[must_use]
     pub fn last(&self) -> Option<&A> {

@@ -2,6 +2,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+//! Helper types for chunks.
+
 use std::fmt::Debug;
 use std::marker::PhantomData;
 
@@ -9,6 +11,10 @@ use typenum::*;
 
 // Chunk sizes
 
+/// A trait used to decide the size of an array.
+///
+/// `<N as ChunkLength<A>>::SizedType` for a type level integer N will have the
+/// same size as `[A; N]`.
 pub trait ChunkLength<A>: Unsigned {
     type SizedType;
 }
