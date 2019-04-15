@@ -814,6 +814,20 @@ impl<N: ChunkLength<u8>> std::io::Write for RingBuffer<u8, N> {
     }
 }
 
+impl<N: ChunkLength<u8>> std::io::Read for RingBuffer<u8, N> {
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        let read_size = buf.len().min(self.len());
+        if read_size == 0 {
+            Ok(0)
+        } else {
+            for i in 0..read_size {
+                buf[i] = self.pop_front().unwrap();
+            }
+            Ok(read_size)
+        }
+    }
+}
+
 impl<A, N: ChunkLength<A>> FromIterator<A> for RingBuffer<A, N> {
     #[must_use]
     fn from_iter<I: IntoIterator<Item = A>>(iter: I) -> Self {
@@ -916,6 +930,20 @@ mod test {
         let to_write: Vec<u8> = (32..128).collect();
         assert_eq!(32, buffer.write(&to_write).unwrap());
         assert_eq!(buffer, (0..64).collect::<Vec<u8>>());
+    }
+
+    #[test]
+    fn io_read() {
+        use std::io::Read;
+        let mut buffer: RingBuffer<u8> = (16..48).collect();
+        let mut read_buf: Vec<u8> = (0..16).collect();
+        assert_eq!(16, buffer.read(&mut read_buf).unwrap());
+        assert_eq!(read_buf, (16..32).collect::<Vec<u8>>());
+        assert_eq!(buffer, (32..48).collect::<Vec<u8>>());
+        assert_eq!(16, buffer.read(&mut read_buf).unwrap());
+        assert_eq!(read_buf, (32..48).collect::<Vec<u8>>());
+        assert_eq!(buffer, vec![]);
+        assert_eq!(0, buffer.read(&mut read_buf).unwrap());
     }
 
     #[test]

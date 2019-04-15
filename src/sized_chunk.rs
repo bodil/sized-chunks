@@ -716,6 +716,20 @@ where
     }
 }
 
+impl<N: ChunkLength<u8>> std::io::Read for Chunk<u8, N> {
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        let read_size = buf.len().min(self.len());
+        if read_size == 0 {
+            Ok(0)
+        } else {
+            for i in 0..read_size {
+                buf[i] = self.pop_front();
+            }
+            Ok(read_size)
+        }
+    }
+}
+
 impl<A, N> Borrow<[A]> for Chunk<A, N>
 where
     N: ChunkLength<A>,
