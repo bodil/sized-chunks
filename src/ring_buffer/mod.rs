@@ -347,7 +347,7 @@ where
 
     /// Get a `Slice` for a subset of the ring buffer.
     #[must_use]
-    pub fn slice<R: RangeBounds<usize>>(&self, range: R) -> Slice<A, N> {
+    pub fn slice<'a, R: RangeBounds<usize>>(&'a self, range: R) -> Slice<'a, A, N> {
         Slice {
             buffer: self,
             range: self.parse_range(range),
@@ -356,7 +356,7 @@ where
 
     /// Get a `SliceMut` for a subset of the ring buffer.
     #[must_use]
-    pub fn slice_mut<R: RangeBounds<usize>>(&mut self, range: R) -> SliceMut<A, N> {
+    pub fn slice_mut<'a, R: RangeBounds<usize>>(&'a mut self, range: R) -> SliceMut<'a, A, N> {
         SliceMut {
             range: self.parse_range(range),
             buffer: self,
@@ -365,7 +365,7 @@ where
 
     /// Get a reference to the value at a given index.
     #[must_use]
-    pub fn get(&self, index: usize) -> Option<&A> {
+    pub fn get<'a>(&'a self, index: usize) -> Option<&'a A> {
         if index >= self.len() {
             None
         } else {
@@ -375,7 +375,7 @@ where
 
     /// Get a mutable reference to the value at a given index.
     #[must_use]
-    pub fn get_mut(&mut self, index: usize) -> Option<&mut A> {
+    pub fn get_mut<'a>(&'a mut self, index: usize) -> Option<&'a mut A> {
         if index >= self.len() {
             None
         } else {

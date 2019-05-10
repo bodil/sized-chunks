@@ -40,7 +40,7 @@ impl<'a, A: 'a, N: ChunkLength<A> + 'a> Slice<'a, A, N> {
     /// Get a reference to the value at a given index.
     #[inline]
     #[must_use]
-    pub fn get(&self, index: usize) -> Option<&A> {
+    pub fn get(&self, index: usize) -> Option<&'a A> {
         if index >= self.len() {
             None
         } else {
@@ -233,7 +233,7 @@ impl<'a, A: Hash + 'a, N: ChunkLength<A> + 'a> Hash for Slice<'a, A, N> {
     }
 }
 
-impl<'a, 'b, A: 'a, N: ChunkLength<A> + 'a> IntoIterator for &'a Slice<'a, A, N> {
+impl<'a, A: 'a, N: ChunkLength<A> + 'a> IntoIterator for &'a Slice<'a, A, N> {
     type Item = &'a A;
     type IntoIter = Iter<'a, A, N>;
 
@@ -280,22 +280,26 @@ impl<'a, A: 'a, N: ChunkLength<A> + 'a> SliceMut<'a, A, N> {
     /// Get a reference to the value at a given index.
     #[inline]
     #[must_use]
-    pub fn get(&self, index: usize) -> Option<&A> {
+    pub fn get(&self, index: usize) -> Option<&'a A> {
         if index >= self.len() {
             None
         } else {
-            self.buffer.get(self.range.start + index)
+            self.buffer
+                .get(self.range.start + index)
+                .map(|r| unsafe { &*(r as *const _) })
         }
     }
 
     /// Get a mutable reference to the value at a given index.
     #[inline]
     #[must_use]
-    pub fn get_mut(&mut self, index: usize) -> Option<&mut A> {
+    pub fn get_mut(&mut self, index: usize) -> Option<&'a mut A> {
         if index >= self.len() {
             None
         } else {
-            self.buffer.get_mut(self.range.start + index)
+            self.buffer
+                .get_mut(self.range.start + index)
+                .map(|r| unsafe { &mut *(r as *mut _) })
         }
     }
 
@@ -366,7 +370,7 @@ impl<'a, A: 'a, N: ChunkLength<A> + 'a> SliceMut<'a, A, N> {
     ///
     /// This consumes the slice. Because the slice works like a mutable
     /// reference, you can only have one slice over a given subset of a
-    /// `RingBuffer` at any one time, sothat's just how it's got to be.
+    /// `RingBuffer` at any one time, so that's just how it's got to be.
     #[must_use]
     pub fn slice<R: RangeBounds<usize>>(self, range: R) -> SliceMut<'a, A, N> {
         let new_range = Range {
