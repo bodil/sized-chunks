@@ -69,6 +69,7 @@
 //! [SparseChunk]: struct.SparseChunk.html
 //! [ArrayVec]: https://docs.rs/arrayvec/
 pub mod bitmap;
+pub mod inline_array;
 pub mod ring_buffer;
 pub mod sized_chunk;
 pub mod sparse_chunk;
@@ -78,6 +79,7 @@ pub mod types;
 mod tests;
 
 pub use crate::bitmap::Bitmap;
+pub use crate::inline_array::InlineArray;
 pub use crate::ring_buffer::RingBuffer;
 pub use crate::sized_chunk::Chunk;
 pub use crate::sparse_chunk::SparseChunk;

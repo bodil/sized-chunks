@@ -6,6 +6,7 @@
 //!
 //! See [`Chunk`](struct.Chunk.html)
 
+use crate::inline_array::InlineArray;
 use std::borrow::{Borrow, BorrowMut};
 use std::cmp::Ordering;
 use std::fmt::{Debug, Error, Formatter};
@@ -249,22 +250,12 @@ where
 
     #[inline]
     fn values(&self) -> &[A] {
-        unsafe {
-            from_raw_parts(
-                &self.data as *const ManuallyDrop<N::SizedType> as *const A,
-                N::USIZE,
-            )
-        }
+        unsafe { from_raw_parts(&self.data as *const _ as *const A, N::USIZE) }
     }
 
     #[inline]
     fn values_mut(&mut self) -> &mut [A] {
-        unsafe {
-            from_raw_parts_mut(
-                &mut self.data as *mut ManuallyDrop<N::SizedType> as *mut A,
-                N::USIZE,
-            )
-        }
+        unsafe { from_raw_parts_mut(&mut self.data as *mut _ as *mut A, N::USIZE) }
     }
 
     /// Copy the value at an index, discarding ownership of the copied value
@@ -424,7 +415,7 @@ where
     /// Time: O(n) for the number of items in the new chunk
     pub fn split_off(&mut self, index: usize) -> Self {
         if index > self.len() {
-            panic!("Chunk::split: index out of bounds");
+            panic!("Chunk::split_off: index out of bounds");
         }
         if index == self.len() {
             return Self::new();
@@ -727,6 +718,38 @@ impl<N: ChunkLength<u8>> std::io::Read for Chunk<u8, N> {
             }
             Ok(read_size)
         }
+    }
+}
+
+impl<A, N, T> From<InlineArray<A, T>> for Chunk<A, N>
+where
+    N: ChunkLength<A>,
+{
+    fn from(mut array: InlineArray<A, T>) -> Self {
+        let mut out = Self::new();
+        out.left = 0;
+        out.right = array.len();
+        unsafe {
+            ptr::copy_nonoverlapping(array.data(), &mut out.values_mut()[0], out.right);
+            *array.len_mut() = 0;
+        }
+        out
+    }
+}
+
+impl<'a, A, N, T> From<&'a mut InlineArray<A, T>> for Chunk<A, N>
+where
+    N: ChunkLength<A>,
+{
+    fn from(array: &mut InlineArray<A, T>) -> Self {
+        let mut out = Self::new();
+        out.left = 0;
+        out.right = array.len();
+        unsafe {
+            ptr::copy_nonoverlapping(array.data(), &mut out.values_mut()[0], out.right);
+            *array.len_mut() = 0;
+        }
+        out
     }
 }
 

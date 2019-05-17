@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic
 Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### ADDED
+
+- A new data structure, `InlineArray`, which is a stack allocated array matching
+  the size of a given type, intended for optimising for the case of very small
+  vectors.
+- `Chunk` has an implementation of `From<InlineArray>` which is considerably
+  faster than going via iterators.
+
 ## [0.2.2] - 2019-05-10
 
 ### ADDED

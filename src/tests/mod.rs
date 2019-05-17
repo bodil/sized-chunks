@@ -1,3 +1,4 @@
+mod inline_array;
 mod ring_buffer;
 mod sized_chunk;
 mod sparse_chunk;
