@@ -120,6 +120,56 @@ macro_rules! bits_for {
     };
 }
 
+macro_rules! bits_for_256 {
+    ($num:ty) => {
+        impl Bits for $num {
+            type Store = [u128; 2];
+
+            fn get(bits: &Self::Store, index: usize) -> bool {
+                debug_assert!(index < Self::USIZE);
+                if index < 128 {
+                    bits[0] & (1 << index) != 0
+                } else {
+                    bits[1] & (1 << (index - 128)) != 0
+                }
+            }
+
+            fn set(bits: &mut Self::Store, index: usize, value: bool) -> bool {
+                debug_assert!(index < Self::USIZE);
+                let mask = 1 << (index & 127);
+                let bits = if index < 128 {
+                    &mut bits[0]
+                } else {
+                    &mut bits[1]
+                };
+                let prev = *bits & mask;
+                if value {
+                    *bits |= mask;
+                } else {
+                    *bits &= !mask;
+                }
+                prev != 0
+            }
+
+            fn len(bits: &Self::Store) -> usize {
+                (bits[0].count_ones() + bits[1].count_ones()) as usize
+            }
+
+            fn first_index(bits: &Self::Store) -> Option<usize> {
+                if bits[0] == 0 {
+                    if bits[1] == 0 {
+                        None
+                    } else {
+                        Some(bits[1].trailing_zeros() as usize + 128)
+                    }
+                } else {
+                    Some(bits[0].trailing_zeros() as usize)
+                }
+            }
+        }
+    };
+}
+
 bits_for!(U1, u8);
 bits_for!(U2, u8);
 bits_for!(U3, u8);
@@ -248,3 +298,131 @@ bits_for!(U125, u128);
 bits_for!(U126, u128);
 bits_for!(U127, u128);
 bits_for!(U128, u128);
+bits_for_256!(U129);
+bits_for_256!(U130);
+bits_for_256!(U131);
+bits_for_256!(U132);
+bits_for_256!(U133);
+bits_for_256!(U134);
+bits_for_256!(U135);
+bits_for_256!(U136);
+bits_for_256!(U137);
+bits_for_256!(U138);
+bits_for_256!(U139);
+bits_for_256!(U140);
+bits_for_256!(U141);
+bits_for_256!(U142);
+bits_for_256!(U143);
+bits_for_256!(U144);
+bits_for_256!(U145);
+bits_for_256!(U146);
+bits_for_256!(U147);
+bits_for_256!(U148);
+bits_for_256!(U149);
+bits_for_256!(U150);
+bits_for_256!(U151);
+bits_for_256!(U152);
+bits_for_256!(U153);
+bits_for_256!(U154);
+bits_for_256!(U155);
+bits_for_256!(U156);
+bits_for_256!(U157);
+bits_for_256!(U158);
+bits_for_256!(U159);
+bits_for_256!(U160);
+bits_for_256!(U161);
+bits_for_256!(U162);
+bits_for_256!(U163);
+bits_for_256!(U164);
+bits_for_256!(U165);
+bits_for_256!(U166);
+bits_for_256!(U167);
+bits_for_256!(U168);
+bits_for_256!(U169);
+bits_for_256!(U170);
+bits_for_256!(U171);
+bits_for_256!(U172);
+bits_for_256!(U173);
+bits_for_256!(U174);
+bits_for_256!(U175);
+bits_for_256!(U176);
+bits_for_256!(U177);
+bits_for_256!(U178);
+bits_for_256!(U179);
+bits_for_256!(U180);
+bits_for_256!(U181);
+bits_for_256!(U182);
+bits_for_256!(U183);
+bits_for_256!(U184);
+bits_for_256!(U185);
+bits_for_256!(U186);
+bits_for_256!(U187);
+bits_for_256!(U188);
+bits_for_256!(U189);
+bits_for_256!(U190);
+bits_for_256!(U191);
+bits_for_256!(U192);
+bits_for_256!(U193);
+bits_for_256!(U194);
+bits_for_256!(U195);
+bits_for_256!(U196);
+bits_for_256!(U197);
+bits_for_256!(U198);
+bits_for_256!(U199);
+bits_for_256!(U200);
+bits_for_256!(U201);
+bits_for_256!(U202);
+bits_for_256!(U203);
+bits_for_256!(U204);
+bits_for_256!(U205);
+bits_for_256!(U206);
+bits_for_256!(U207);
+bits_for_256!(U208);
+bits_for_256!(U209);
+bits_for_256!(U210);
+bits_for_256!(U211);
+bits_for_256!(U212);
+bits_for_256!(U213);
+bits_for_256!(U214);
+bits_for_256!(U215);
+bits_for_256!(U216);
+bits_for_256!(U217);
+bits_for_256!(U218);
+bits_for_256!(U219);
+bits_for_256!(U220);
+bits_for_256!(U221);
+bits_for_256!(U222);
+bits_for_256!(U223);
+bits_for_256!(U224);
+bits_for_256!(U225);
+bits_for_256!(U226);
+bits_for_256!(U227);
+bits_for_256!(U228);
+bits_for_256!(U229);
+bits_for_256!(U230);
+bits_for_256!(U231);
+bits_for_256!(U232);
+bits_for_256!(U233);
+bits_for_256!(U234);
+bits_for_256!(U235);
+bits_for_256!(U236);
+bits_for_256!(U237);
+bits_for_256!(U238);
+bits_for_256!(U239);
+bits_for_256!(U240);
+bits_for_256!(U241);
+bits_for_256!(U242);
+bits_for_256!(U243);
+bits_for_256!(U244);
+bits_for_256!(U245);
+bits_for_256!(U246);
+bits_for_256!(U247);
+bits_for_256!(U248);
+bits_for_256!(U249);
+bits_for_256!(U250);
+bits_for_256!(U251);
+bits_for_256!(U252);
+bits_for_256!(U253);
+bits_for_256!(U254);
+bits_for_256!(U255);
+bits_for_256!(U256);
