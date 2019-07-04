@@ -347,7 +347,7 @@ where
 
     /// Get a `Slice` for a subset of the ring buffer.
     #[must_use]
-    pub fn slice<'a, R: RangeBounds<usize>>(&'a self, range: R) -> Slice<'a, A, N> {
+    pub fn slice<R: RangeBounds<usize>>(&self, range: R) -> Slice<A, N> {
         Slice {
             buffer: self,
             range: self.parse_range(range),
@@ -356,7 +356,7 @@ where
 
     /// Get a `SliceMut` for a subset of the ring buffer.
     #[must_use]
-    pub fn slice_mut<'a, R: RangeBounds<usize>>(&'a mut self, range: R) -> SliceMut<'a, A, N> {
+    pub fn slice_mut<R: RangeBounds<usize>>(&mut self, range: R) -> SliceMut<A, N> {
         SliceMut {
             range: self.parse_range(range),
             buffer: self,
@@ -365,7 +365,7 @@ where
 
     /// Get a reference to the value at a given index.
     #[must_use]
-    pub fn get<'a>(&'a self, index: usize) -> Option<&'a A> {
+    pub fn get(&self, index: usize) -> Option<&A> {
         if index >= self.len() {
             None
         } else {
@@ -375,7 +375,7 @@ where
 
     /// Get a mutable reference to the value at a given index.
     #[must_use]
-    pub fn get_mut<'a>(&'a mut self, index: usize) -> Option<&'a mut A> {
+    pub fn get_mut(&mut self, index: usize) -> Option<&mut A> {
         if index >= self.len() {
             None
         } else {
@@ -851,8 +851,8 @@ impl<N: ChunkLength<u8>> std::io::Read for RingBuffer<u8, N> {
         if read_size == 0 {
             Ok(0)
         } else {
-            for i in 0..read_size {
-                buf[i] = self.pop_front().unwrap();
+            for p in buf.iter_mut().take(read_size) {
+                *p = self.pop_front().unwrap();
             }
             Ok(read_size)
         }

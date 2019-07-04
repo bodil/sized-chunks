@@ -713,8 +713,8 @@ impl<N: ChunkLength<u8>> std::io::Read for Chunk<u8, N> {
         if read_size == 0 {
             Ok(0)
         } else {
-            for i in 0..read_size {
-                buf[i] = self.pop_front();
+            for p in buf.iter_mut().take(read_size) {
+                *p = self.pop_front();
             }
             Ok(read_size)
         }
