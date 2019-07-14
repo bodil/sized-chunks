@@ -68,7 +68,10 @@
 //! [RingBuffer]: struct.RingBuffer.html
 //! [SparseChunk]: struct.SparseChunk.html
 //! [ArrayVec]: https://docs.rs/arrayvec/
+#![feature(const_generics, const_fn)]
+
 pub mod bitmap;
+pub mod const_bitmap;
 pub mod inline_array;
 pub mod ring_buffer;
 pub mod sized_chunk;
