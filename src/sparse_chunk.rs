@@ -89,22 +89,12 @@ where
 
     #[inline]
     fn values(&self) -> &[A] {
-        unsafe {
-            from_raw_parts(
-                &self.data as *const ManuallyDrop<N::SizedType> as *const A,
-                N::USIZE,
-            )
-        }
+        unsafe { from_raw_parts(&self.data as *const _ as *const A, N::USIZE) }
     }
 
     #[inline]
     fn values_mut(&mut self) -> &mut [A] {
-        unsafe {
-            from_raw_parts_mut(
-                &mut self.data as *mut ManuallyDrop<N::SizedType> as *mut A,
-                N::USIZE,
-            )
-        }
+        unsafe { from_raw_parts_mut(&mut self.data as *mut _ as *mut A, N::USIZE) }
     }
 
     /// Copy the value at an index, discarding ownership of the copied value
@@ -127,12 +117,7 @@ where
 
     /// Construct a new empty chunk.
     pub fn new() -> Self {
-        let mut chunk: Self;
-        unsafe {
-            chunk = mem::zeroed();
-            ptr::write(&mut chunk.map, Bitmap::new());
-        }
-        chunk
+        unsafe { mem::zeroed() }
     }
 
     /// Construct a new chunk with one item.
@@ -175,13 +160,12 @@ where
         if index >= N::USIZE {
             panic!("SparseChunk::insert: index out of bounds");
         }
-        let prev = if self.map.set(index, true) {
-            Some(unsafe { SparseChunk::force_read(index, self) })
+        if self.map.set(index, true) {
+            Some(mem::replace(&mut self.values_mut()[index], value))
         } else {
+            unsafe { SparseChunk::force_write(index, value, self) };
             None
-        };
-        unsafe { SparseChunk::force_write(index, value, self) };
-        prev
+        }
     }
 
     /// Remove the value at a given index.
@@ -300,7 +284,7 @@ where
     N: Bits + ChunkLength<A>,
 {
     fn eq(&self, other: &Self) -> bool {
-        if self.len() != other.len() {
+        if self.map != other.map {
             return false;
         }
         for index in self.indices() {
