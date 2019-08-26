@@ -267,10 +267,7 @@ impl<A, T> InlineArray<A, T> {
     #[inline]
     fn drop_contents(&mut self) {
         unsafe {
-            let data = self.data_mut();
-            for i in 0..self.len() {
-                ptr::drop_in_place(data.add(i));
-            }
+            ptr::drop_in_place::<[A]>(&mut **self)
         }
     }
 

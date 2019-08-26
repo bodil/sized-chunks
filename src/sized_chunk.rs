@@ -13,7 +13,7 @@ use std::fmt::{Debug, Error, Formatter};
 use std::hash::{Hash, Hasher};
 use std::io;
 use std::iter::{FromIterator, FusedIterator};
-use std::mem::{self, replace, MaybeUninit};
+use std::mem::{replace, MaybeUninit};
 use std::ops::{Deref, DerefMut, Index, IndexMut};
 use std::ptr;
 use std::slice::{
@@ -106,10 +106,8 @@ where
     N: ChunkLength<A>,
 {
     fn drop(&mut self) {
-        if mem::needs_drop::<A>() {
-            for i in self.left..self.right {
-                unsafe { Chunk::force_drop(i, self) }
-            }
+        unsafe {
+            ptr::drop_in_place(self.as_mut_slice())
         }
     }
 }
@@ -270,12 +268,6 @@ where
         ptr::write(&mut chunk.values_mut()[index], value)
     }
 
-    /// Drop the value at an index
-    #[inline]
-    unsafe fn force_drop(index: usize, chunk: &mut Self) {
-        ptr::drop_in_place(&mut chunk.values_mut()[index])
-    }
-
     /// Copy a range within a chunk
     #[inline]
     unsafe fn force_copy(from: usize, to: usize, count: usize, chunk: &mut Self) {
@@ -376,12 +368,8 @@ where
     /// Time: O(n) for the number of items dropped
     pub fn drop_left(&mut self, index: usize) {
         if index > 0 {
-            if index > self.len() {
-                panic!("Chunk::drop_left: index out of bounds");
-            }
-            let start = self.left;
-            for i in start..(start + index) {
-                unsafe { Chunk::force_drop(i, self) }
+            unsafe {
+                ptr::drop_in_place(&mut self[..index])
             }
             self.left += index;
         }
@@ -393,17 +381,12 @@ where
     ///
     /// Time: O(n) for the number of items dropped
     pub fn drop_right(&mut self, index: usize) {
-        if index > self.len() {
-            panic!("Chunk::drop_right: index out of bounds");
+        if index != self.len() {
+            unsafe {
+                ptr::drop_in_place(&mut self[index..])
+            }
+            self.right = self.left + index;
         }
-        if index == self.len() {
-            return;
-        }
-        let start = self.left + index;
-        for i in start..self.right {
-            unsafe { Chunk::force_drop(i, self) }
-        }
-        self.right = start;
     }
 
     /// Split a chunk into two, the original chunk containing
@@ -570,8 +553,8 @@ where
     ///
     /// Time: O(n)
     pub fn clear(&mut self) {
-        for i in self.left..self.right {
-            unsafe { Chunk::force_drop(i, self) }
+        unsafe {
+            ptr::drop_in_place(self.as_mut_slice())
         }
         self.left = 0;
         self.right = 0;
