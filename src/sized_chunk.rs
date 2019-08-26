@@ -122,7 +122,7 @@ where
         out.left = self.left;
         out.right = self.right;
         for index in self.left..self.right {
-            unsafe { Chunk::force_write(index, self.values()[index].clone(), &mut out) }
+            unsafe { Chunk::force_write(index, (*self.ptr(index)).clone(), &mut out) }
         }
         out
     }
@@ -247,32 +247,32 @@ where
     }
 
     #[inline]
-    fn values(&self) -> &[A] {
-        unsafe { from_raw_parts(&self.data as *const _ as *const A, N::USIZE) }
+    unsafe fn ptr(&self, index: usize) -> *const A {
+        (&self.data as *const _ as *const A).add(index)
     }
 
     #[inline]
-    fn values_mut(&mut self) -> &mut [A] {
-        unsafe { from_raw_parts_mut(&mut self.data as *mut _ as *mut A, N::USIZE) }
+    unsafe fn mut_ptr(&mut self, index: usize) -> *mut A {
+        (&mut self.data as *mut _ as *mut A).add(index)
     }
 
     /// Copy the value at an index, discarding ownership of the copied value
     #[inline]
     unsafe fn force_read(index: usize, chunk: &mut Self) -> A {
-        ptr::read(&chunk.values()[index])
+        chunk.ptr(index).read()
     }
 
     /// Write a value at an index without trying to drop what's already there
     #[inline]
     unsafe fn force_write(index: usize, value: A, chunk: &mut Self) {
-        ptr::write(&mut chunk.values_mut()[index], value)
+        chunk.mut_ptr(index).write(value)
     }
 
     /// Copy a range within a chunk
     #[inline]
     unsafe fn force_copy(from: usize, to: usize, count: usize, chunk: &mut Self) {
         if count > 0 {
-            ptr::copy(&chunk.values()[from], &mut chunk.values_mut()[to], count)
+            ptr::copy(chunk.ptr(from), chunk.mut_ptr(to), count)
         }
     }
 
@@ -286,7 +286,7 @@ where
         other: &mut Self,
     ) {
         if count > 0 {
-            ptr::copy_nonoverlapping(&chunk.values()[from], &mut other.values_mut()[to], count)
+            ptr::copy_nonoverlapping(chunk.ptr(from), other.mut_ptr(to), count)
         }
     }
 
@@ -708,15 +708,9 @@ impl<A, N, T> From<InlineArray<A, T>> for Chunk<A, N>
 where
     N: ChunkLength<A>,
 {
+    #[inline]
     fn from(mut array: InlineArray<A, T>) -> Self {
-        let mut out = Self::new();
-        out.left = 0;
-        out.right = array.len();
-        unsafe {
-            ptr::copy_nonoverlapping(array.data(), &mut out.values_mut()[0], out.right);
-            *array.len_mut() = 0;
-        }
-        out
+        Self::from(&mut array)
     }
 }
 
@@ -729,7 +723,7 @@ where
         out.left = 0;
         out.right = array.len();
         unsafe {
-            ptr::copy_nonoverlapping(array.data(), &mut out.values_mut()[0], out.right);
+            ptr::copy_nonoverlapping(array.data(), out.mut_ptr(0), out.right);
             *array.len_mut() = 0;
         }
         out
