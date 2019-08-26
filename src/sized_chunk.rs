@@ -13,7 +13,7 @@ use std::fmt::{Debug, Error, Formatter};
 use std::hash::{Hash, Hasher};
 use std::io;
 use std::iter::{FromIterator, FusedIterator};
-use std::mem::{self, replace, ManuallyDrop};
+use std::mem::{self, replace, MaybeUninit};
 use std::ops::{Deref, DerefMut, Index, IndexMut};
 use std::ptr;
 use std::slice::{
@@ -98,7 +98,7 @@ where
 {
     left: usize,
     right: usize,
-    data: ManuallyDrop<N::SizedType>,
+    data: MaybeUninit<N::SizedType>,
 }
 
 impl<A, N> Drop for Chunk<A, N>
@@ -138,22 +138,21 @@ where
 
     /// Construct a new empty chunk.
     pub fn new() -> Self {
-        let mut chunk: Self;
-        unsafe {
-            chunk = mem::zeroed();
-            ptr::write(&mut chunk.left, 0);
-            ptr::write(&mut chunk.right, 0);
+        Self {
+            left: 0,
+            right: 0,
+            data: MaybeUninit::uninit(),
         }
-        chunk
     }
 
     /// Construct a new chunk with one item.
     pub fn unit(value: A) -> Self {
-        let mut chunk: Self;
+        let mut chunk = Self {
+            left: 0,
+            right: 1,
+            data: MaybeUninit::uninit(),
+        };
         unsafe {
-            chunk = mem::zeroed();
-            ptr::write(&mut chunk.left, 0);
-            ptr::write(&mut chunk.right, 1);
             Chunk::force_write(0, value, &mut chunk);
         }
         chunk
@@ -161,11 +160,12 @@ where
 
     /// Construct a new chunk with two items.
     pub fn pair(left: A, right: A) -> Self {
-        let mut chunk: Self;
+        let mut chunk = Self {
+            left: 0,
+            right: 2,
+            data: MaybeUninit::uninit(),
+        };
         unsafe {
-            chunk = mem::zeroed();
-            ptr::write(&mut chunk.left, 0);
-            ptr::write(&mut chunk.right, 2);
             Chunk::force_write(0, left, &mut chunk);
             Chunk::force_write(1, right, &mut chunk);
         }
@@ -581,7 +581,7 @@ where
     pub fn as_slice(&self) -> &[A] {
         unsafe {
             from_raw_parts(
-                (&self.data as *const ManuallyDrop<N::SizedType> as *const A).add(self.left),
+                (&self.data as *const MaybeUninit<N::SizedType> as *const A).add(self.left),
                 self.len(),
             )
         }
@@ -591,7 +591,7 @@ where
     pub fn as_mut_slice(&mut self) -> &mut [A] {
         unsafe {
             from_raw_parts_mut(
-                (&mut self.data as *mut ManuallyDrop<N::SizedType> as *mut A).add(self.left),
+                (&mut self.data as *mut MaybeUninit<N::SizedType> as *mut A).add(self.left),
                 self.len(),
             )
         }

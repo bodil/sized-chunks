@@ -11,7 +11,7 @@ use std::cmp::Ordering;
 use std::fmt::{Debug, Error, Formatter};
 use std::hash::{Hash, Hasher};
 use std::iter::FromIterator;
-use std::mem::ManuallyDrop;
+use std::mem::MaybeUninit;
 use std::ops::{Bound, Range, RangeBounds};
 use std::ops::{Index, IndexMut};
 
@@ -58,7 +58,7 @@ where
 {
     origin: RawIndex<A, N>,
     length: usize,
-    data: ManuallyDrop<N::SizedType>,
+    data: MaybeUninit<N::SizedType>,
 }
 
 impl<A, N: ChunkLength<A>> Drop for RingBuffer<A, N> {
@@ -190,24 +190,23 @@ where
     #[inline]
     #[must_use]
     pub fn new() -> Self {
-        let mut buffer: Self;
-        unsafe {
-            buffer = std::mem::zeroed();
-            std::ptr::write(&mut buffer.origin, 0.into());
-            std::ptr::write(&mut buffer.length, 0);
+        Self {
+            origin: 0.into(),
+            length: 0,
+            data: MaybeUninit::uninit(),
         }
-        buffer
     }
 
     /// Construct a ring buffer with a single item.
     #[inline]
     #[must_use]
     pub fn unit(value: A) -> Self {
-        let mut buffer: Self;
+        let mut buffer = Self {
+            origin: 0.into(),
+            length: 1,
+            data: MaybeUninit::uninit(),
+        };
         unsafe {
-            buffer = std::mem::zeroed();
-            std::ptr::write(&mut buffer.origin, 0.into());
-            std::ptr::write(&mut buffer.length, 1);
             buffer.force_write(0.into(), value);
         }
         buffer
@@ -217,11 +216,12 @@ where
     #[inline]
     #[must_use]
     pub fn pair(value1: A, value2: A) -> Self {
-        let mut buffer: Self;
+        let mut buffer = Self {
+            origin: 0.into(),
+            length: 2,
+            data: MaybeUninit::uninit(),
+        };
         unsafe {
-            buffer = std::mem::zeroed();
-            std::ptr::write(&mut buffer.origin, 0.into());
-            std::ptr::write(&mut buffer.length, 2);
             buffer.force_write(0.into(), value1);
             buffer.force_write(1.into(), value2);
         }
