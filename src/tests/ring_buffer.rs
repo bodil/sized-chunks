@@ -9,6 +9,11 @@ use proptest_derive::Arbitrary;
 
 use crate::ring_buffer::RingBuffer;
 
+#[test]
+fn validity_invariant() {
+    assert!(Some(RingBuffer::<Box<()>>::new()).is_some());
+}
+
 #[derive(Debug)]
 struct InputVec<A>(Vec<A>);
 

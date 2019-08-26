@@ -9,6 +9,11 @@ use proptest_derive::Arbitrary;
 
 use crate::sparse_chunk::SparseChunk;
 
+#[test]
+fn validity_invariant() {
+    assert!(Some(SparseChunk::<Box<()>>::new()).is_some());
+}
+
 #[derive(Arbitrary, Debug)]
 enum Construct<A> {
     Empty,
