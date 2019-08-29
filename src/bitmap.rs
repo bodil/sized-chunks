@@ -148,7 +148,7 @@ mod test {
     use super::*;
     use proptest::collection::btree_set;
     use proptest::proptest;
-    use typenum::U64;
+    use typenum::{U1024, U64};
 
     proptest! {
         #[test]
@@ -158,6 +158,18 @@ mod test {
                 bitmap.set(*i, true);
             }
             for i in 0..64 {
+                assert_eq!(bitmap.get(i), bits.contains(&i));
+            }
+            assert!(bitmap.into_iter().eq(bits.into_iter()));
+        }
+
+        #[test]
+        fn get_set_and_iter_1024(bits in btree_set(0..1024usize, 0..1024)) {
+            let mut bitmap = Bitmap::<U1024>::new();
+            for i in &bits {
+                bitmap.set(*i, true);
+            }
+            for i in 0..1024 {
                 assert_eq!(bitmap.get(i), bits.contains(&i));
             }
             assert!(bitmap.into_iter().eq(bits.into_iter()));
