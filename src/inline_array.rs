@@ -12,7 +12,7 @@ use std::fmt::{Debug, Error, Formatter};
 use std::hash::{Hash, Hasher};
 use std::iter::{FromIterator, FusedIterator};
 use std::marker::PhantomData;
-use std::mem::{self, ManuallyDrop};
+use std::mem::{self, MaybeUninit};
 use std::ops::{Deref, DerefMut};
 use std::ptr;
 use std::slice::{from_raw_parts, from_raw_parts_mut, Iter as SliceIter, IterMut as SliceIterMut};
@@ -70,7 +70,7 @@ use std::slice::{from_raw_parts, from_raw_parts_mut, Iter as SliceIter, IterMut 
 /// Both of these will have the same size, and we can swap the `Inline` case out
 /// with the `Full` case once the `InlineArray` runs out of capacity.
 pub struct InlineArray<A, T> {
-    data: ManuallyDrop<T>,
+    data: MaybeUninit<T>,
     phantom: PhantomData<A>,
 }
 
@@ -153,7 +153,14 @@ impl<A, T> InlineArray<A, T> {
     #[must_use]
     pub fn new() -> Self {
         debug_assert!(Self::HOST_SIZE > Self::HEADER_SIZE);
-        unsafe { mem::zeroed() }
+        let mut self_ = Self {
+            data: MaybeUninit::uninit(),
+            phantom: PhantomData,
+        };
+        unsafe {
+            *self_.len_mut() = 0
+        }
+        self_
     }
 
     #[inline]
@@ -260,10 +267,7 @@ impl<A, T> InlineArray<A, T> {
     #[inline]
     fn drop_contents(&mut self) {
         unsafe {
-            let data = self.data_mut();
-            for i in 0..self.len() {
-                ptr::drop_in_place(data.add(i));
-            }
+            ptr::drop_in_place::<[A]>(&mut **self)
         }
     }
 

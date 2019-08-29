@@ -8,7 +8,7 @@
 
 use std::collections::{BTreeMap, HashMap};
 use std::fmt::{Debug, Error, Formatter};
-use std::mem::{self, ManuallyDrop};
+use std::mem::{self, MaybeUninit};
 use std::ops::Index;
 use std::ops::IndexMut;
 use std::ptr;
@@ -58,7 +58,7 @@ use crate::types::{Bits, ChunkLength};
 /// [Unsigned]: https://docs.rs/typenum/1.10.0/typenum/marker_traits/trait.Unsigned.html
 pub struct SparseChunk<A, N: Bits + ChunkLength<A> = U64> {
     map: Bitmap<N>,
-    data: ManuallyDrop<N::SizedType>,
+    data: MaybeUninit<N::SizedType>,
 }
 
 impl<A, N: Bits + ChunkLength<A>> Drop for SparseChunk<A, N> {
@@ -117,7 +117,10 @@ where
 
     /// Construct a new empty chunk.
     pub fn new() -> Self {
-        unsafe { mem::zeroed() }
+        Self {
+            map: Bitmap::default(),
+            data: MaybeUninit::uninit(),
+        }
     }
 
     /// Construct a new chunk with one item.

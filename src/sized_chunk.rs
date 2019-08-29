@@ -13,7 +13,7 @@ use std::fmt::{Debug, Error, Formatter};
 use std::hash::{Hash, Hasher};
 use std::io;
 use std::iter::{FromIterator, FusedIterator};
-use std::mem::{self, replace, ManuallyDrop};
+use std::mem::{replace, MaybeUninit};
 use std::ops::{Deref, DerefMut, Index, IndexMut};
 use std::ptr;
 use std::slice::{
@@ -98,7 +98,7 @@ where
 {
     left: usize,
     right: usize,
-    data: ManuallyDrop<N::SizedType>,
+    data: MaybeUninit<N::SizedType>,
 }
 
 impl<A, N> Drop for Chunk<A, N>
@@ -106,10 +106,8 @@ where
     N: ChunkLength<A>,
 {
     fn drop(&mut self) {
-        if mem::needs_drop::<A>() {
-            for i in self.left..self.right {
-                unsafe { Chunk::force_drop(i, self) }
-            }
+        unsafe {
+            ptr::drop_in_place(self.as_mut_slice())
         }
     }
 }
@@ -124,7 +122,7 @@ where
         out.left = self.left;
         out.right = self.right;
         for index in self.left..self.right {
-            unsafe { Chunk::force_write(index, self.values()[index].clone(), &mut out) }
+            unsafe { Chunk::force_write(index, (*self.ptr(index)).clone(), &mut out) }
         }
         out
     }
@@ -138,22 +136,21 @@ where
 
     /// Construct a new empty chunk.
     pub fn new() -> Self {
-        let mut chunk: Self;
-        unsafe {
-            chunk = mem::zeroed();
-            ptr::write(&mut chunk.left, 0);
-            ptr::write(&mut chunk.right, 0);
+        Self {
+            left: 0,
+            right: 0,
+            data: MaybeUninit::uninit(),
         }
-        chunk
     }
 
     /// Construct a new chunk with one item.
     pub fn unit(value: A) -> Self {
-        let mut chunk: Self;
+        let mut chunk = Self {
+            left: 0,
+            right: 1,
+            data: MaybeUninit::uninit(),
+        };
         unsafe {
-            chunk = mem::zeroed();
-            ptr::write(&mut chunk.left, 0);
-            ptr::write(&mut chunk.right, 1);
             Chunk::force_write(0, value, &mut chunk);
         }
         chunk
@@ -161,11 +158,12 @@ where
 
     /// Construct a new chunk with two items.
     pub fn pair(left: A, right: A) -> Self {
-        let mut chunk: Self;
+        let mut chunk = Self {
+            left: 0,
+            right: 2,
+            data: MaybeUninit::uninit(),
+        };
         unsafe {
-            chunk = mem::zeroed();
-            ptr::write(&mut chunk.left, 0);
-            ptr::write(&mut chunk.right, 2);
             Chunk::force_write(0, left, &mut chunk);
             Chunk::force_write(1, right, &mut chunk);
         }
@@ -249,38 +247,32 @@ where
     }
 
     #[inline]
-    fn values(&self) -> &[A] {
-        unsafe { from_raw_parts(&self.data as *const _ as *const A, N::USIZE) }
+    unsafe fn ptr(&self, index: usize) -> *const A {
+        (&self.data as *const _ as *const A).add(index)
     }
 
     #[inline]
-    fn values_mut(&mut self) -> &mut [A] {
-        unsafe { from_raw_parts_mut(&mut self.data as *mut _ as *mut A, N::USIZE) }
+    unsafe fn mut_ptr(&mut self, index: usize) -> *mut A {
+        (&mut self.data as *mut _ as *mut A).add(index)
     }
 
     /// Copy the value at an index, discarding ownership of the copied value
     #[inline]
     unsafe fn force_read(index: usize, chunk: &mut Self) -> A {
-        ptr::read(&chunk.values()[index])
+        chunk.ptr(index).read()
     }
 
     /// Write a value at an index without trying to drop what's already there
     #[inline]
     unsafe fn force_write(index: usize, value: A, chunk: &mut Self) {
-        ptr::write(&mut chunk.values_mut()[index], value)
-    }
-
-    /// Drop the value at an index
-    #[inline]
-    unsafe fn force_drop(index: usize, chunk: &mut Self) {
-        ptr::drop_in_place(&mut chunk.values_mut()[index])
+        chunk.mut_ptr(index).write(value)
     }
 
     /// Copy a range within a chunk
     #[inline]
     unsafe fn force_copy(from: usize, to: usize, count: usize, chunk: &mut Self) {
         if count > 0 {
-            ptr::copy(&chunk.values()[from], &mut chunk.values_mut()[to], count)
+            ptr::copy(chunk.ptr(from), chunk.mut_ptr(to), count)
         }
     }
 
@@ -294,7 +286,7 @@ where
         other: &mut Self,
     ) {
         if count > 0 {
-            ptr::copy_nonoverlapping(&chunk.values()[from], &mut other.values_mut()[to], count)
+            ptr::copy_nonoverlapping(chunk.ptr(from), other.mut_ptr(to), count)
         }
     }
 
@@ -376,12 +368,8 @@ where
     /// Time: O(n) for the number of items dropped
     pub fn drop_left(&mut self, index: usize) {
         if index > 0 {
-            if index > self.len() {
-                panic!("Chunk::drop_left: index out of bounds");
-            }
-            let start = self.left;
-            for i in start..(start + index) {
-                unsafe { Chunk::force_drop(i, self) }
+            unsafe {
+                ptr::drop_in_place(&mut self[..index])
             }
             self.left += index;
         }
@@ -393,17 +381,12 @@ where
     ///
     /// Time: O(n) for the number of items dropped
     pub fn drop_right(&mut self, index: usize) {
-        if index > self.len() {
-            panic!("Chunk::drop_right: index out of bounds");
+        if index != self.len() {
+            unsafe {
+                ptr::drop_in_place(&mut self[index..])
+            }
+            self.right = self.left + index;
         }
-        if index == self.len() {
-            return;
-        }
-        let start = self.left + index;
-        for i in start..self.right {
-            unsafe { Chunk::force_drop(i, self) }
-        }
-        self.right = start;
     }
 
     /// Split a chunk into two, the original chunk containing
@@ -570,8 +553,8 @@ where
     ///
     /// Time: O(n)
     pub fn clear(&mut self) {
-        for i in self.left..self.right {
-            unsafe { Chunk::force_drop(i, self) }
+        unsafe {
+            ptr::drop_in_place(self.as_mut_slice())
         }
         self.left = 0;
         self.right = 0;
@@ -581,7 +564,7 @@ where
     pub fn as_slice(&self) -> &[A] {
         unsafe {
             from_raw_parts(
-                (&self.data as *const ManuallyDrop<N::SizedType> as *const A).add(self.left),
+                (&self.data as *const MaybeUninit<N::SizedType> as *const A).add(self.left),
                 self.len(),
             )
         }
@@ -591,7 +574,7 @@ where
     pub fn as_mut_slice(&mut self) -> &mut [A] {
         unsafe {
             from_raw_parts_mut(
-                (&mut self.data as *mut ManuallyDrop<N::SizedType> as *mut A).add(self.left),
+                (&mut self.data as *mut MaybeUninit<N::SizedType> as *mut A).add(self.left),
                 self.len(),
             )
         }
@@ -725,15 +708,9 @@ impl<A, N, T> From<InlineArray<A, T>> for Chunk<A, N>
 where
     N: ChunkLength<A>,
 {
+    #[inline]
     fn from(mut array: InlineArray<A, T>) -> Self {
-        let mut out = Self::new();
-        out.left = 0;
-        out.right = array.len();
-        unsafe {
-            ptr::copy_nonoverlapping(array.data(), &mut out.values_mut()[0], out.right);
-            *array.len_mut() = 0;
-        }
-        out
+        Self::from(&mut array)
     }
 }
 
@@ -746,7 +723,7 @@ where
         out.left = 0;
         out.right = array.len();
         unsafe {
-            ptr::copy_nonoverlapping(array.data(), &mut out.values_mut()[0], out.right);
+            ptr::copy_nonoverlapping(array.data(), out.mut_ptr(0), out.right);
             *array.len_mut() = 0;
         }
         out

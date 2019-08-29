@@ -9,6 +9,11 @@ use proptest_derive::Arbitrary;
 
 use crate::sized_chunk::Chunk;
 
+#[test]
+fn validity_invariant() {
+    assert!(Some(Chunk::<Box<()>>::new()).is_some());
+}
+
 #[derive(Debug)]
 struct InputVec<A>(Vec<A>);
 

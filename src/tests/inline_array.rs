@@ -7,6 +7,15 @@ use proptest_derive::Arbitrary;
 
 use crate::inline_array::InlineArray;
 
+#[test]
+fn validity_invariant() {
+    assert!(Some(InlineArray::<usize, [Box<()>; 2]>::new()).is_some());
+
+    let mut chunk = InlineArray::<usize, [Box<()>; 2]>::new();
+    chunk.push(0);
+    assert!(Some(chunk).is_some());
+}
+
 type TestType = [usize; 16];
 
 #[derive(Arbitrary, Debug)]
