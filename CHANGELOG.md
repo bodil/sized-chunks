@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic
 Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### ADDED
+
+- Chunk/bitmap sizes up to 1024 are now supported.
+
+### FIXED
+
+- Replaced `ManuallyDrop` in implementations with `MaybeUninit`, along with a
+  general unsafe code cleanup. (#3)
+
 ## [0.3.1] - 2019-08-03
 
 ### ADDED
