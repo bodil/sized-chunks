@@ -57,7 +57,7 @@ where
 
 /// A type level number signifying the number of bits in a bitmap.
 ///
-/// This trait is implemented for type level numbers from `U1` to `U128`.
+/// This trait is implemented for type level numbers from `U1` to `U1024`.
 ///
 /// # Examples
 ///

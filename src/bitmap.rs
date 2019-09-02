@@ -12,10 +12,10 @@ use crate::types::Bits;
 
 /// A compact array of bits.
 ///
-/// The bitmap is stored as a primitive type, so the maximum value of `Size` is
-/// currently 128, corresponding to a type of `u128`. The type used to store the
-/// bitmap will be the minimum unsigned integer type required to fit the number
-/// of bits required, from `u8` to `u128`.
+/// The type used to store the bitmap will be the minimum unsigned integer type
+/// required to fit the number of bits, from `u8` to `u128`. If the size exceeds
+/// 128, an array of `u128` will be used, sized as appropriately. The maximum
+/// supported size is currently 1024, represented by an array `[u128; 8]`.
 ///
 /// # Examples
 ///
