@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic
 Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### CHANGED
+
+- The 0.3.2 release increased the minimum rustc version required, which should
+  have been a major version bump, so 0.3.2 is being yanked and re-tagged as
+  0.4.0.
+
 ## [0.3.2] - 2019-08-29
 
 ### ADDED
