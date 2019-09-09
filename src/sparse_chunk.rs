@@ -16,8 +16,9 @@ use std::slice::{from_raw_parts, from_raw_parts_mut};
 
 use typenum::U64;
 
-use crate::bitmap::{Bitmap, Iter as BitmapIter};
-use crate::types::{Bits, ChunkLength};
+use bitmaps::{Bitmap, Bits, Iter as BitmapIter};
+
+use crate::types::ChunkLength;
 
 /// A fixed capacity sparse array.
 ///
@@ -64,7 +65,7 @@ pub struct SparseChunk<A, N: Bits + ChunkLength<A> = U64> {
 impl<A, N: Bits + ChunkLength<A>> Drop for SparseChunk<A, N> {
     fn drop(&mut self) {
         if mem::needs_drop::<A>() {
-            for index in self.map {
+            for index in &self.map.clone() {
                 unsafe { SparseChunk::force_drop(index, self) }
             }
         }
@@ -74,7 +75,7 @@ impl<A, N: Bits + ChunkLength<A>> Drop for SparseChunk<A, N> {
 impl<A: Clone, N: Bits + ChunkLength<A>> Clone for SparseChunk<A, N> {
     fn clone(&self) -> Self {
         let mut out = Self::new();
-        for index in self.map {
+        for index in &self.map {
             out.insert(index, self[index].clone());
         }
         out
@@ -238,7 +239,7 @@ where
     /// array.
     pub fn iter_mut(&mut self) -> IterMut<'_, A, N> {
         IterMut {
-            indices: self.indices(),
+            bitmap: self.map.clone(),
             chunk: self,
         }
     }
@@ -354,7 +355,7 @@ where
 }
 
 pub struct Iter<'a, A: 'a, N: 'a + Bits + ChunkLength<A>> {
-    indices: BitmapIter<N>,
+    indices: BitmapIter<'a, N>,
     chunk: &'a SparseChunk<A, N>,
 }
 
@@ -367,7 +368,7 @@ impl<'a, A, N: Bits + ChunkLength<A>> Iterator for Iter<'a, A, N> {
 }
 
 pub struct IterMut<'a, A: 'a, N: 'a + Bits + ChunkLength<A>> {
-    indices: BitmapIter<N>,
+    bitmap: Bitmap<N>,
     chunk: &'a mut SparseChunk<A, N>,
 }
 
@@ -375,7 +376,8 @@ impl<'a, A, N: Bits + ChunkLength<A>> Iterator for IterMut<'a, A, N> {
     type Item = &'a mut A;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if let Some(index) = self.indices.next() {
+        if let Some(index) = self.bitmap.first_index() {
+            self.bitmap.set(index, false);
             unsafe {
                 let p: *mut A = &mut self.chunk.values_mut()[index];
                 Some(&mut *p)

@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic
 Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### CHANGED
+
+- The `Bitmap` type (and its helper type, `Bits`) has been split off into a
+  separate crate, named `bitmaps`. If you need it, it's in that crate now.
+  `sized-chunks` does not re-export it. Of course, this means `sized-chunks` has
+  gained `bitmaps` as its second hard dependency.
+
 ## [0.4.0] - 2019-09-02
 
 ### CHANGED
