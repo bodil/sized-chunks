@@ -65,7 +65,8 @@ pub struct SparseChunk<A, N: Bits + ChunkLength<A> = U64> {
 impl<A, N: Bits + ChunkLength<A>> Drop for SparseChunk<A, N> {
     fn drop(&mut self) {
         if mem::needs_drop::<A>() {
-            for index in &self.map.clone() {
+            let bits = self.map;
+            for index in &bits {
                 unsafe { SparseChunk::force_drop(index, self) }
             }
         }
@@ -239,7 +240,7 @@ where
     /// array.
     pub fn iter_mut(&mut self) -> IterMut<'_, A, N> {
         IterMut {
-            bitmap: self.map.clone(),
+            bitmap: self.map,
             chunk: self,
         }
     }
