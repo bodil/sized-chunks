@@ -111,7 +111,7 @@ impl<'a, A, N> ExactSizeIterator for IterMut<'a, A, N> where N: ChunkLength<A> {
 impl<'a, A, N> FusedIterator for IterMut<'a, A, N> where N: ChunkLength<A> {}
 
 /// A draining iterator over a `RingBuffer`.
-pub struct Drain<'a, A: 'a, N: ChunkLength<A> + 'a> {
+pub struct Drain<'a, A, N: ChunkLength<A>> {
     pub(crate) buffer: &'a mut RingBuffer<A, N>,
 }
 

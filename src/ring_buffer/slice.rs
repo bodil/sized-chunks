@@ -17,7 +17,7 @@ use crate::types::ChunkLength;
 use super::{Iter, IterMut, RingBuffer};
 
 /// An indexable representation of a subset of a `RingBuffer`.
-pub struct Slice<'a, A: 'a, N: ChunkLength<A> + 'a> {
+pub struct Slice<'a, A, N: ChunkLength<A>> {
     pub(crate) buffer: &'a RingBuffer<A, N>,
     pub(crate) range: Range<usize>,
 }
@@ -69,7 +69,7 @@ impl<'a, A: 'a, N: ChunkLength<A> + 'a> Slice<'a, A, N> {
     /// Get an iterator over references to the items in the slice in order.
     #[inline]
     #[must_use]
-    pub fn iter(&self) -> Iter<A, N> {
+    pub fn iter(&self) -> Iter<'_, A, N> {
         Iter {
             buffer: self.buffer,
             left_index: self.buffer.origin + self.range.start,
@@ -218,7 +218,7 @@ impl<'a, A: Ord + 'a, N: ChunkLength<A> + 'a> Ord for Slice<'a, A, N> {
 }
 
 impl<'a, A: Debug + 'a, N: ChunkLength<A> + 'a> Debug for Slice<'a, A, N> {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
         f.write_str("RingBuffer")?;
         f.debug_list().entries(self.iter()).finish()
     }
@@ -247,7 +247,7 @@ impl<'a, A: 'a, N: ChunkLength<A> + 'a> IntoIterator for &'a Slice<'a, A, N> {
 // Mutable slice
 
 /// An indexable representation of a mutable subset of a `RingBuffer`.
-pub struct SliceMut<'a, A: 'a, N: ChunkLength<A> + 'a> {
+pub struct SliceMut<'a, A, N: ChunkLength<A>> {
     pub(crate) buffer: &'a mut RingBuffer<A, N>,
     pub(crate) range: Range<usize>,
 }
@@ -342,7 +342,7 @@ impl<'a, A: 'a, N: ChunkLength<A> + 'a> SliceMut<'a, A, N> {
     /// Get an iterator over references to the items in the slice in order.
     #[inline]
     #[must_use]
-    pub fn iter(&self) -> Iter<A, N> {
+    pub fn iter(&self) -> Iter<'_, A, N> {
         Iter {
             buffer: self.buffer,
             left_index: self.buffer.origin + self.range.start,
@@ -355,7 +355,7 @@ impl<'a, A: 'a, N: ChunkLength<A> + 'a> SliceMut<'a, A, N> {
     /// order.
     #[inline]
     #[must_use]
-    pub fn iter_mut(&mut self) -> IterMut<A, N> {
+    pub fn iter_mut(&mut self) -> IterMut<'_, A, N> {
         let origin = self.buffer.origin;
         let len = self.len();
         IterMut {
@@ -525,7 +525,7 @@ impl<'a, A: Ord + 'a, N: ChunkLength<A> + 'a> Ord for SliceMut<'a, A, N> {
 }
 
 impl<'a, A: Debug + 'a, N: ChunkLength<A> + 'a> Debug for SliceMut<'a, A, N> {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
         f.write_str("RingBuffer")?;
         f.debug_list().entries(self.iter()).finish()
     }

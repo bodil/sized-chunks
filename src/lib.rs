@@ -68,6 +68,12 @@
 //! [RingBuffer]: struct.RingBuffer.html
 //! [SparseChunk]: struct.SparseChunk.html
 //! [ArrayVec]: https://docs.rs/arrayvec/
+
+#![forbid(rust_2018_idioms)]
+#![deny(nonstandard_style)]
+#![warn(unreachable_pub, missing_docs)]
+#![cfg_attr(test, deny(warnings))]
+
 pub mod inline_array;
 pub mod ring_buffer;
 pub mod sized_chunk;

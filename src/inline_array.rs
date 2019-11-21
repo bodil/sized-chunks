@@ -79,6 +79,7 @@ impl<A, T> InlineArray<A, T> {
     const ELEMENT_SIZE: usize = mem::size_of::<A>();
     const HEADER_SIZE: usize = mem::size_of::<usize>();
 
+    /// The maximum number of elements the `InlineArray` can hold.
     pub const CAPACITY: usize = (Self::HOST_SIZE - Self::HEADER_SIZE) / Self::ELEMENT_SIZE;
 
     #[inline]
@@ -157,9 +158,7 @@ impl<A, T> InlineArray<A, T> {
             data: MaybeUninit::uninit(),
             phantom: PhantomData,
         };
-        unsafe {
-            *self_.len_mut() = 0
-        }
+        unsafe { *self_.len_mut() = 0 }
         self_
     }
 
@@ -266,9 +265,7 @@ impl<A, T> InlineArray<A, T> {
 
     #[inline]
     fn drop_contents(&mut self) {
-        unsafe {
-            ptr::drop_in_place::<[A]>(&mut **self)
-        }
+        unsafe { ptr::drop_in_place::<[A]>(&mut **self) }
     }
 
     /// Discard the contents of the array.
@@ -282,7 +279,7 @@ impl<A, T> InlineArray<A, T> {
     }
 
     /// Construct an iterator that drains values from the front of the array.
-    pub fn drain(&mut self) -> Drain<A, T> {
+    pub fn drain(&mut self) -> Drain<'_, A, T> {
         Drain { array: self }
     }
 }
@@ -390,7 +387,7 @@ impl<A, T> Debug for InlineArray<A, T>
 where
     A: Debug,
 {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
         f.write_str("Chunk")?;
         f.debug_list().entries(self.iter()).finish()
     }
@@ -482,6 +479,7 @@ where
     }
 }
 
+/// A consuming iterator over the elements of an `InlineArray`.
 pub struct Iter<A, T> {
     array: InlineArray<A, T>,
 }
@@ -508,6 +506,13 @@ impl<A, T> ExactSizeIterator for Iter<A, T> {}
 
 impl<A, T> FusedIterator for Iter<A, T> {}
 
+/// A draining iterator over the elements of an `InlineArray`.
+///
+/// "Draining" means that as the iterator yields each element, it's removed from
+/// the `InlineArray`. When the iterator terminates, the array will be empty.
+/// This is different from the consuming iterator `Iter` in that `Iter` will
+/// take ownership of the `InlineArray` and discard it when you're done
+/// iterating, while `Drain` leaves you still owning the drained `InlineArray`.
 pub struct Drain<'a, A, T> {
     array: &'a mut InlineArray<A, T>,
 }

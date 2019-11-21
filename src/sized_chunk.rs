@@ -106,9 +106,7 @@ where
     N: ChunkLength<A>,
 {
     fn drop(&mut self) {
-        unsafe {
-            ptr::drop_in_place(self.as_mut_slice())
-        }
+        unsafe { ptr::drop_in_place(self.as_mut_slice()) }
     }
 }
 
@@ -132,6 +130,7 @@ impl<A, N> Chunk<A, N>
 where
     N: ChunkLength<A>,
 {
+    /// The maximum number of elements this `Chunk` can contain.
     pub const CAPACITY: usize = N::USIZE;
 
     /// Construct a new empty chunk.
@@ -368,9 +367,7 @@ where
     /// Time: O(n) for the number of items dropped
     pub fn drop_left(&mut self, index: usize) {
         if index > 0 {
-            unsafe {
-                ptr::drop_in_place(&mut self[..index])
-            }
+            unsafe { ptr::drop_in_place(&mut self[..index]) }
             self.left += index;
         }
     }
@@ -382,9 +379,7 @@ where
     /// Time: O(n) for the number of items dropped
     pub fn drop_right(&mut self, index: usize) {
         if index != self.len() {
-            unsafe {
-                ptr::drop_in_place(&mut self[index..])
-            }
+            unsafe { ptr::drop_in_place(&mut self[index..]) }
             self.right = self.left + index;
         }
     }
@@ -553,9 +548,7 @@ where
     ///
     /// Time: O(n)
     pub fn clear(&mut self) {
-        unsafe {
-            ptr::drop_in_place(self.as_mut_slice())
-        }
+        unsafe { ptr::drop_in_place(self.as_mut_slice()) }
         self.left = 0;
         self.right = 0;
     }
@@ -616,7 +609,7 @@ where
     A: Debug,
     N: ChunkLength<A>,
 {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
         f.write_str("Chunk")?;
         f.debug_list().entries(self.iter()).finish()
     }
@@ -863,6 +856,7 @@ where
     }
 }
 
+/// A consuming iterator over the elements of a `Chunk`.
 pub struct Iter<A, N>
 where
     N: ChunkLength<A>,
@@ -917,10 +911,16 @@ where
     }
 }
 
+/// A draining iterator over the elements of a `Chunk`.
+///
+/// "Draining" means that as the iterator yields each element, it's removed from
+/// the `Chunk`. When the iterator terminates, the chunk will be empty. This is
+/// different from the consuming iterator `Iter` in that `Iter` will take
+/// ownership of the `Chunk` and discard it when you're done iterating, while
+/// `Drain` leaves you still owning the drained `Chunk`.
 pub struct Drain<'a, A, N>
 where
-    A: 'a,
-    N: ChunkLength<A> + 'a,
+    N: ChunkLength<A>,
 {
     chunk: &'a mut Chunk<A, N>,
 }
@@ -1184,7 +1184,7 @@ mod test {
     fn dropping() {
         let counter = AtomicUsize::new(0);
         {
-            let mut chunk: Chunk<DropTest> = Chunk::new();
+            let mut chunk: Chunk<DropTest<'_>> = Chunk::new();
             for _i in 0..20 {
                 chunk.push_back(DropTest::new(&counter))
             }

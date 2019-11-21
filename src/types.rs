@@ -15,6 +15,7 @@ use typenum::*;
 /// `<N as ChunkLength<A>>::SizedType` for a type level integer N will have the
 /// same size as `[A; N]`.
 pub trait ChunkLength<A>: Unsigned {
+    /// A `Sized` type matching the size of an array of `Self` elements of `A`.
     type SizedType;
 }
 

@@ -3,7 +3,7 @@ mod ring_buffer;
 mod sized_chunk;
 mod sparse_chunk;
 
-pub fn action_count() -> usize {
+pub(crate) fn action_count() -> usize {
     std::env::var("ACTION_COUNT")
         .ok()
         .and_then(|s| s.parse().ok())

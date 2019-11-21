@@ -347,7 +347,7 @@ where
 
     /// Get a `Slice` for a subset of the ring buffer.
     #[must_use]
-    pub fn slice<R: RangeBounds<usize>>(&self, range: R) -> Slice<A, N> {
+    pub fn slice<R: RangeBounds<usize>>(&self, range: R) -> Slice<'_, A, N> {
         Slice {
             buffer: self,
             range: self.parse_range(range),
@@ -356,7 +356,7 @@ where
 
     /// Get a `SliceMut` for a subset of the ring buffer.
     #[must_use]
-    pub fn slice_mut<R: RangeBounds<usize>>(&mut self, range: R) -> SliceMut<A, N> {
+    pub fn slice_mut<R: RangeBounds<usize>>(&mut self, range: R) -> SliceMut<'_, A, N> {
         SliceMut {
             range: self.parse_range(range),
             buffer: self,
@@ -813,7 +813,7 @@ impl<'a, A: Clone + 'a, N: ChunkLength<A>> Extend<&'a A> for RingBuffer<A, N> {
 }
 
 impl<A: Debug, N: ChunkLength<A>> Debug for RingBuffer<A, N> {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
         f.write_str("RingBuffer")?;
         f.debug_list().entries(self.iter()).finish()
     }
@@ -1017,7 +1017,7 @@ mod test {
     fn dropping() {
         let counter = AtomicUsize::new(0);
         {
-            let mut chunk: RingBuffer<DropTest> = RingBuffer::new();
+            let mut chunk: RingBuffer<DropTest<'_>> = RingBuffer::new();
             for _i in 0..20 {
                 chunk.push_back(DropTest::new(&counter))
             }

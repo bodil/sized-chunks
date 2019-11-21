@@ -87,6 +87,7 @@ impl<A, N> SparseChunk<A, N>
 where
     N: Bits + ChunkLength<A>,
 {
+    /// The maximum number of elements a `SparseChunk` can contain.
     pub const CAPACITY: usize = N::USIZE;
 
     #[inline]
@@ -219,7 +220,7 @@ where
     }
 
     /// Make an iterator over the indices which contain values.
-    pub fn indices(&self) -> BitmapIter<N> {
+    pub fn indices(&self) -> BitmapIter<'_, N> {
         self.map.into_iter()
     }
 
@@ -349,13 +350,14 @@ where
     A: Debug,
     N: Bits + ChunkLength<A>,
 {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
         f.write_str("SparseChunk")?;
         f.debug_map().entries(self.entries()).finish()
     }
 }
 
-pub struct Iter<'a, A: 'a, N: 'a + Bits + ChunkLength<A>> {
+/// An iterator over references to the elements of a `SparseChunk`.
+pub struct Iter<'a, A, N: Bits + ChunkLength<A>> {
     indices: BitmapIter<'a, N>,
     chunk: &'a SparseChunk<A, N>,
 }
@@ -368,7 +370,8 @@ impl<'a, A, N: Bits + ChunkLength<A>> Iterator for Iter<'a, A, N> {
     }
 }
 
-pub struct IterMut<'a, A: 'a, N: 'a + Bits + ChunkLength<A>> {
+/// An iterator over mutable references to the elements of a `SparseChunk`.
+pub struct IterMut<'a, A, N: Bits + ChunkLength<A>> {
     bitmap: Bitmap<N>,
     chunk: &'a mut SparseChunk<A, N>,
 }
@@ -389,6 +392,10 @@ impl<'a, A, N: Bits + ChunkLength<A>> Iterator for IterMut<'a, A, N> {
     }
 }
 
+/// A draining iterator over the elements of a `SparseChunk`.
+///
+/// "Draining" means that as the iterator yields each element, it's removed from
+/// the `SparseChunk`. When the iterator terminates, the chunk will be empty.
 pub struct Drain<A, N: Bits + ChunkLength<A>> {
     chunk: SparseChunk<A, N>,
 }

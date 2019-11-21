@@ -8,7 +8,7 @@ use std::ops::{Add, AddAssign, Sub, SubAssign};
 
 use crate::types::ChunkLength;
 
-pub struct RawIndex<A, N: ChunkLength<A>>(usize, PhantomData<(A, N)>);
+pub(crate) struct RawIndex<A, N: ChunkLength<A>>(usize, PhantomData<(A, N)>);
 
 impl<A, N: ChunkLength<A>> Clone for RawIndex<A, N> {
     #[inline]
@@ -23,14 +23,14 @@ impl<A, N> Copy for RawIndex<A, N> where N: ChunkLength<A> {}
 impl<A, N: ChunkLength<A>> RawIndex<A, N> {
     #[inline]
     #[must_use]
-    pub fn to_usize(self) -> usize {
+    pub(crate) fn to_usize(self) -> usize {
         self.0
     }
 
     /// Increments the index and returns a copy of the index /before/ incrementing.
     #[inline]
     #[must_use]
-    pub fn inc(&mut self) -> Self {
+    pub(crate) fn inc(&mut self) -> Self {
         let old = *self;
         self.0 = if self.0 == N::USIZE - 1 {
             0
@@ -43,7 +43,7 @@ impl<A, N: ChunkLength<A>> RawIndex<A, N> {
     /// Decrements the index and returns a copy of the new value.
     #[inline]
     #[must_use]
-    pub fn dec(&mut self) -> Self {
+    pub(crate) fn dec(&mut self) -> Self {
         self.0 = if self.0 == 0 {
             N::USIZE - 1
         } else {
@@ -136,10 +136,10 @@ impl<A, N: ChunkLength<A>> SubAssign<usize> for RawIndex<A, N> {
     }
 }
 
-pub struct IndexIter<A, N: ChunkLength<A>> {
-    pub remaining: usize,
-    pub left_index: RawIndex<A, N>,
-    pub right_index: RawIndex<A, N>,
+pub(crate) struct IndexIter<A, N: ChunkLength<A>> {
+    pub(crate) remaining: usize,
+    pub(crate) left_index: RawIndex<A, N>,
+    pub(crate) right_index: RawIndex<A, N>,
 }
 
 impl<A, N: ChunkLength<A>> Iterator for IndexIter<A, N> {
