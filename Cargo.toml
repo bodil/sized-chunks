@@ -12,9 +12,6 @@ categories = ["data-structures"]
 keywords = ["sparse-array"]
 exclude = ["release.toml", "proptest-regressions/**"]
 
-[badges]
-travis-ci = { repository = "bodil/sized-chunks" }
-
 [dependencies]
 typenum = "1.10.0"
 bitmaps = "2.0.0"
