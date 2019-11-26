@@ -77,13 +77,21 @@ pub struct InlineArray<A, T> {
     phantom: PhantomData<A>,
 }
 
+const fn capacity(host_size: usize, header_size: usize, element_size: usize) -> usize {
+    if element_size == 0 {
+        usize::MAX
+    } else {
+        (host_size - header_size) / element_size
+    }
+}
+
 impl<A, T> InlineArray<A, T> {
     const HOST_SIZE: usize = mem::size_of::<T>();
     const ELEMENT_SIZE: usize = mem::size_of::<A>();
     const HEADER_SIZE: usize = mem::size_of::<usize>();
 
     /// The maximum number of elements the `InlineArray` can hold.
-    pub const CAPACITY: usize = (Self::HOST_SIZE - Self::HEADER_SIZE) / Self::ELEMENT_SIZE;
+    pub const CAPACITY: usize = capacity(Self::HOST_SIZE, Self::HEADER_SIZE, Self::ELEMENT_SIZE);
 
     #[inline]
     #[must_use]
@@ -497,5 +505,15 @@ mod test {
             assert_eq!(8, counter.load(Ordering::Relaxed));
         }
         assert_eq!(0, counter.load(Ordering::Relaxed));
+    }
+
+    #[test]
+    fn zero_sized_values() {
+        let mut chunk: InlineArray<(), [usize; 32]> = InlineArray::new();
+        for _i in 0..65536 {
+            chunk.push(());
+        }
+        assert_eq!(65536, chunk.len());
+        assert_eq!(Some(()), chunk.pop());
     }
 }

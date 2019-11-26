@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) and this project
 adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### FIXED
+
+-   `InlineArray` can now handle zero sized values. This relies on conditionals in const functions,
+    a feature which was introduced in Rust 1.46.0, which means this is now the minimum Rust version
+    this crate will work on.
+
 ## [0.6.2] - 2020-05-15
 
 ### FIXED
