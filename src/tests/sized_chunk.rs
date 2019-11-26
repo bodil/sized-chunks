@@ -289,3 +289,40 @@ proptest! {
         }
     }
 }
+
+#[cfg(feature = "refpool")]
+mod refpool_test {
+    use super::*;
+    use refpool::{Pool, PoolRef};
+
+    #[test]
+    fn stress_test() {
+        let pool_size = 1024;
+        let allocs = 2048;
+
+        let pool: Pool<Chunk<usize>> = Pool::new(pool_size);
+        pool.fill();
+
+        for _ in 0..8 {
+            let mut store = Vec::new();
+            for _ in 0..allocs {
+                store.push(PoolRef::default(&pool));
+            }
+            for chunk in &mut store {
+                let chunk = PoolRef::make_mut(&pool, chunk);
+                for _ in 0..32 {
+                    chunk.push_front(1);
+                    chunk.push_back(2);
+                }
+            }
+            let mut expected: Chunk<usize> = Chunk::new();
+            for _ in 0..32 {
+                expected.push_back(2);
+                expected.push_front(1);
+            }
+            for chunk in &store {
+                assert_eq!(expected, **chunk);
+            }
+        }
+    }
+}

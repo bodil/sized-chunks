@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic
 Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### ADDED
+
+- `PoolDefault` and `PoolClone` implementations, from the
+  `[`refpool`][https://crates.io/crates/refpool] crate, are available for
+  ``Chunk`, SparseChunk` and `RingBuffer`, behind the `refpool` feature flag.
+
 ## [0.5.0] - 2019-09-09
 
 ### CHANGED
