@@ -453,15 +453,15 @@ mod refpool {
 
         #[test]
         fn default_and_clone() {
-            let mut pool: Pool<SparseChunk<usize>> = Pool::new(16);
-            let mut ref1 = PoolRef::default(&mut pool);
+            let pool: Pool<SparseChunk<usize>> = Pool::new(16);
+            let mut ref1 = PoolRef::default(&pool);
             {
-                let chunk = PoolRef::make_mut(&mut pool, &mut ref1);
+                let chunk = PoolRef::make_mut(&pool, &mut ref1);
                 chunk.insert(5, 13);
                 chunk.insert(10, 37);
                 chunk.insert(31, 337);
             }
-            let ref2 = ref1.cloned(&mut pool);
+            let ref2 = ref1.cloned(&pool);
             assert_eq!(ref1, ref2);
             assert!(!PoolRef::ptr_eq(&ref1, &ref2));
         }

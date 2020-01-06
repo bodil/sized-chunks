@@ -1016,16 +1016,16 @@ mod refpool {
 
         #[test]
         fn default_and_clone() {
-            let mut pool: Pool<Chunk<usize>> = Pool::new(16);
-            let mut ref1 = PoolRef::default(&mut pool);
+            let pool: Pool<Chunk<usize>> = Pool::new(16);
+            let mut ref1 = PoolRef::default(&pool);
             {
-                let chunk = PoolRef::make_mut(&mut pool, &mut ref1);
+                let chunk = PoolRef::make_mut(&pool, &mut ref1);
                 chunk.push_back(1);
                 chunk.push_back(2);
                 chunk.push_back(3);
             }
-            let ref2 = ref1.cloned(&mut pool);
-            let ref3 = PoolRef::clone_from(&mut pool, &Chunk::from_iter(1..=3));
+            let ref2 = ref1.cloned(&pool);
+            let ref3 = PoolRef::clone_from(&pool, &Chunk::from_iter(1..=3));
             assert_eq!(Chunk::<usize>::from_iter(1..=3), *ref1);
             assert_eq!(Chunk::<usize>::from_iter(1..=3), *ref2);
             assert_eq!(Chunk::<usize>::from_iter(1..=3), *ref3);
