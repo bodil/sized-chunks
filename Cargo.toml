@@ -12,6 +12,9 @@ categories = ["data-structures"]
 keywords = ["sparse-array"]
 exclude = ["release.toml", "proptest-regressions/**"]
 
+[package.metadata.docs.rs]
+all-features = true
+
 [dependencies]
 typenum = "1.10.0"
 bitmaps = "2.0.0"
