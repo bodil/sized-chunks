@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic
 Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### ADDED
+
+- `Chunk` now has an `insert_ordered` method for inserting values into a
+  sorted chunk.
+
 ## [0.5.1] - 2019-12-12
 
 ### ADDED

@@ -483,9 +483,9 @@ where
     /// Insert a new value at index `index`, shifting all the following values
     /// to the right.
     ///
-    /// Panics if the index is out of bounds.
+    /// Panics if the index is out of bounds or the chunk is full.
     ///
-    /// Time: O(n) for the number of items shifted
+    /// Time: O(n) for the number of elements shifted
     pub fn insert(&mut self, index: usize, value: A) {
         if self.is_full() {
             panic!("Chunk::insert: chunk is full");
@@ -508,6 +508,38 @@ where
                 Chunk::force_write(real_index, value, self);
             }
             self.right += 1;
+        }
+    }
+
+    /// Insert a new value into the chunk in sorted order.
+    ///
+    /// This assumes every element of the chunk is already in sorted order.
+    /// If not, the value will still be inserted but the ordering is not
+    /// guaranteed.
+    ///
+    /// Time: O(log n) to find the insert position, then O(n) for the number
+    /// of elements shifted.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # use std::iter::FromIterator;
+    /// # use sized_chunks::Chunk;
+    /// # use typenum::U64;
+    /// let mut chunk = Chunk::<i32, U64>::from_iter(0..5);
+    /// chunk.insert_ordered(3);
+    /// assert_eq!(&[0, 1, 2, 3, 3, 4], chunk.as_slice());
+    /// ```
+    pub fn insert_ordered(&mut self, value: A)
+    where
+        A: Ord,
+    {
+        if self.is_full() {
+            panic!("Chunk::insert: chunk is full");
+        }
+        match self.binary_search(&value) {
+            Ok(index) => self.insert(index, value),
+            Err(index) => self.insert(index, value),
         }
     }
 
