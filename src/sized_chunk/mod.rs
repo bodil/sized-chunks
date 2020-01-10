@@ -72,8 +72,9 @@ mod refpool;
 /// than a [`RingBuffer`][RingBuffer], which is similar but doesn't need to
 /// shift its content around when it hits the sides of the allocated buffer. The
 /// answer is that `Chunk` can be dereferenced into a slice, while a ring buffer
-/// can not. If you don't need to be able to do that, a ring buffer will
-/// generally be the marginally more efficient choice.
+/// can not. You'll also save a few cycles on index lookups, as a `Chunk`'s data
+/// is guaranteed to be contiguous in memory, so there's no need to remap logical
+/// indices to a ring buffer's physical layout.
 ///
 /// # Examples
 ///
