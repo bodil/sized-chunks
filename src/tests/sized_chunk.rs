@@ -71,6 +71,7 @@ where
     DrainFromBack(Construct<A>, usize),
     Set(usize, A),
     Insert(usize, A),
+    InsertFrom(Vec<A>, usize),
     Remove(usize),
     Drain,
     Clear,
@@ -265,6 +266,16 @@ proptest! {
                     } else {
                         chunk.insert(index, value);
                         guide.insert(index, value);
+                    }
+                }
+                Action::InsertFrom(values, index) => {
+                    if index >= chunk.len() || chunk.len() + values.len() > capacity {
+                        assert!(catch_unwind(AssertUnwindSafe(|| chunk.insert_from(index, values))).is_err());
+                    } else {
+                        chunk.insert_from(index, values.clone());
+                        for value in values.into_iter().rev() {
+                            guide.insert(index, value);
+                        }
                     }
                 }
                 Action::Remove(index) => {

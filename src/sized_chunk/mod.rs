@@ -549,6 +549,57 @@ where
         }
     }
 
+    /// Insert multiple values at index `index`, shifting all the following values
+    /// to the right.
+    ///
+    /// Panics if the index is out of bounds or the chunk doesn't have room for
+    /// all the values.
+    ///
+    /// Time: O(m+n) where m is the number of elements inserted and n is the number
+    /// of elements following the insertion index. Calling `insert`
+    /// repeatedly would be O(m*n).
+    pub fn insert_from<Iterable, I>(&mut self, index: usize, iter: Iterable)
+    where
+        Iterable: IntoIterator<Item = A, IntoIter = I>,
+        I: ExactSizeIterator<Item = A>,
+    {
+        let iter = iter.into_iter();
+        let insert_size = iter.len();
+        if self.len() + insert_size > Self::CAPACITY {
+            panic!(
+                "Chunk::insert_from: chunk cannot fit {} elements",
+                insert_size
+            );
+        }
+        if index > self.len() {
+            panic!("Chunk::insert_from: index out of bounds");
+        }
+        let real_index = index + self.left;
+        let left_size = index;
+        let right_size = self.right - real_index;
+        if self.right == N::USIZE || (self.left > 0 && left_size < right_size) {
+            unsafe {
+                Chunk::force_copy(self.left, self.left - insert_size, left_size, self);
+                let mut write_index = real_index - insert_size;
+                for value in iter {
+                    Chunk::force_write(write_index, value, self);
+                    write_index += 1;
+                }
+            }
+            self.left -= insert_size;
+        } else {
+            unsafe {
+                Chunk::force_copy(real_index, real_index + insert_size, right_size, self);
+                let mut write_index = real_index;
+                for value in iter {
+                    Chunk::force_write(write_index, value, self);
+                    write_index += 1;
+                }
+            }
+            self.right += insert_size;
+        }
+    }
+
     /// Remove the value at index `index`, shifting all the following values to
     /// the left.
     ///

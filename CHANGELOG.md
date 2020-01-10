@@ -10,7 +10,9 @@ Versioning](http://semver.org/spec/v2.0.0.html).
 
 ### ADDED
 
-- `Chunk` now has an `insert_ordered` method for inserting values into a
+- `Chunk` now has an `insert_from` method for inserting multiple values at an
+  index in one go.
+- `Chunk` now also has an `insert_ordered` method for inserting values into a
   sorted chunk.
 
 ## [0.5.1] - 2019-12-12
