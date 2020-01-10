@@ -20,6 +20,12 @@ use bitmaps::{Bitmap, Bits, Iter as BitmapIter};
 
 use crate::types::ChunkLength;
 
+mod iter;
+pub use self::iter::{Drain, Iter, IterMut};
+
+#[cfg(feature = "refpool")]
+mod refpool;
+
 /// A fixed capacity sparse array.
 ///
 /// An inline sparse array of up to `N` items of type `A`, where `N` is an
@@ -357,114 +363,6 @@ where
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
         f.write_str("SparseChunk")?;
         f.debug_map().entries(self.entries()).finish()
-    }
-}
-
-/// An iterator over references to the elements of a `SparseChunk`.
-pub struct Iter<'a, A, N: Bits + ChunkLength<A>> {
-    indices: BitmapIter<'a, N>,
-    chunk: &'a SparseChunk<A, N>,
-}
-
-impl<'a, A, N: Bits + ChunkLength<A>> Iterator for Iter<'a, A, N> {
-    type Item = &'a A;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.indices.next().map(|index| &self.chunk.values()[index])
-    }
-}
-
-/// An iterator over mutable references to the elements of a `SparseChunk`.
-pub struct IterMut<'a, A, N: Bits + ChunkLength<A>> {
-    bitmap: Bitmap<N>,
-    chunk: &'a mut SparseChunk<A, N>,
-}
-
-impl<'a, A, N: Bits + ChunkLength<A>> Iterator for IterMut<'a, A, N> {
-    type Item = &'a mut A;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if let Some(index) = self.bitmap.first_index() {
-            self.bitmap.set(index, false);
-            unsafe {
-                let p: *mut A = &mut self.chunk.values_mut()[index];
-                Some(&mut *p)
-            }
-        } else {
-            None
-        }
-    }
-}
-
-/// A draining iterator over the elements of a `SparseChunk`.
-///
-/// "Draining" means that as the iterator yields each element, it's removed from
-/// the `SparseChunk`. When the iterator terminates, the chunk will be empty.
-pub struct Drain<A, N: Bits + ChunkLength<A>> {
-    chunk: SparseChunk<A, N>,
-}
-
-impl<'a, A, N: Bits + ChunkLength<A>> Iterator for Drain<A, N> {
-    type Item = A;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.chunk.pop()
-    }
-}
-
-#[cfg(feature = "refpool")]
-mod refpool {
-    use super::*;
-    use ::refpool::{PoolClone, PoolDefault};
-    use std::mem::MaybeUninit;
-
-    impl<A, N> PoolDefault for SparseChunk<A, N>
-    where
-        N: Bits + ChunkLength<A>,
-    {
-        unsafe fn default_uninit(target: &mut MaybeUninit<Self>) {
-            let ptr = target.as_mut_ptr();
-            let map_ptr: *mut Bitmap<N> = &mut (*ptr).map;
-            map_ptr.write(Bitmap::new());
-        }
-    }
-
-    impl<A, N> PoolClone for SparseChunk<A, N>
-    where
-        A: Clone,
-        N: Bits + ChunkLength<A>,
-    {
-        unsafe fn clone_uninit(&self, target: &mut MaybeUninit<Self>) {
-            let ptr = target.as_mut_ptr();
-            let map_ptr: *mut Bitmap<N> = &mut (*ptr).map;
-            let data_ptr: *mut _ = &mut (*ptr).data;
-            let data_ptr: *mut A = (*data_ptr).as_mut_ptr().cast();
-            map_ptr.write(self.map);
-            for index in &self.map {
-                data_ptr.add(index).write(self[index].clone());
-            }
-        }
-    }
-
-    #[cfg(test)]
-    mod test {
-        use super::*;
-        use ::refpool::{Pool, PoolRef};
-
-        #[test]
-        fn default_and_clone() {
-            let pool: Pool<SparseChunk<usize>> = Pool::new(16);
-            let mut ref1 = PoolRef::default(&pool);
-            {
-                let chunk = PoolRef::make_mut(&pool, &mut ref1);
-                chunk.insert(5, 13);
-                chunk.insert(10, 37);
-                chunk.insert(31, 337);
-            }
-            let ref2 = ref1.cloned(&pool);
-            assert_eq!(ref1, ref2);
-            assert!(!PoolRef::ptr_eq(&ref1, &ref2));
-        }
     }
 }
 

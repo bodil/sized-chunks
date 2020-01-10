@@ -12,7 +12,7 @@ use std::cmp::Ordering;
 use std::fmt::{Debug, Error, Formatter};
 use std::hash::{Hash, Hasher};
 use std::io;
-use std::iter::{FromIterator, FusedIterator};
+use std::iter::FromIterator;
 use std::mem::{replace, MaybeUninit};
 use std::ops::{Deref, DerefMut, Index, IndexMut};
 use std::ptr;
@@ -23,6 +23,12 @@ use std::slice::{
 use typenum::U64;
 
 use crate::types::ChunkLength;
+
+mod iter;
+pub use self::iter::{Drain, Iter};
+
+#[cfg(feature = "refpool")]
+mod refpool;
 
 /// A fixed capacity smart array.
 ///
@@ -886,49 +892,6 @@ where
     }
 }
 
-/// A consuming iterator over the elements of a `Chunk`.
-pub struct Iter<A, N>
-where
-    N: ChunkLength<A>,
-{
-    chunk: Chunk<A, N>,
-}
-
-impl<A, N> Iterator for Iter<A, N>
-where
-    N: ChunkLength<A>,
-{
-    type Item = A;
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.chunk.is_empty() {
-            None
-        } else {
-            Some(self.chunk.pop_front())
-        }
-    }
-
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        (self.chunk.len(), Some(self.chunk.len()))
-    }
-}
-
-impl<A, N> DoubleEndedIterator for Iter<A, N>
-where
-    N: ChunkLength<A>,
-{
-    fn next_back(&mut self) -> Option<Self::Item> {
-        if self.chunk.is_empty() {
-            None
-        } else {
-            Some(self.chunk.pop_back())
-        }
-    }
-}
-
-impl<A, N> ExactSizeIterator for Iter<A, N> where N: ChunkLength<A> {}
-
-impl<A, N> FusedIterator for Iter<A, N> where N: ChunkLength<A> {}
-
 impl<A, N> IntoIterator for Chunk<A, N>
 where
     N: ChunkLength<A>,
@@ -938,134 +901,6 @@ where
 
     fn into_iter(self) -> Self::IntoIter {
         Iter { chunk: self }
-    }
-}
-
-/// A draining iterator over the elements of a `Chunk`.
-///
-/// "Draining" means that as the iterator yields each element, it's removed from
-/// the `Chunk`. When the iterator terminates, the chunk will be empty. This is
-/// different from the consuming iterator `Iter` in that `Iter` will take
-/// ownership of the `Chunk` and discard it when you're done iterating, while
-/// `Drain` leaves you still owning the drained `Chunk`.
-pub struct Drain<'a, A, N>
-where
-    N: ChunkLength<A>,
-{
-    chunk: &'a mut Chunk<A, N>,
-}
-
-impl<'a, A, N> Iterator for Drain<'a, A, N>
-where
-    A: 'a,
-    N: ChunkLength<A> + 'a,
-{
-    type Item = A;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.chunk.is_empty() {
-            None
-        } else {
-            Some(self.chunk.pop_front())
-        }
-    }
-
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        (self.chunk.len(), Some(self.chunk.len()))
-    }
-}
-
-impl<'a, A, N> DoubleEndedIterator for Drain<'a, A, N>
-where
-    A: 'a,
-    N: ChunkLength<A> + 'a,
-{
-    fn next_back(&mut self) -> Option<Self::Item> {
-        if self.chunk.is_empty() {
-            None
-        } else {
-            Some(self.chunk.pop_back())
-        }
-    }
-}
-
-impl<'a, A, N> ExactSizeIterator for Drain<'a, A, N>
-where
-    A: 'a,
-    N: ChunkLength<A> + 'a,
-{
-}
-
-impl<'a, A, N> FusedIterator for Drain<'a, A, N>
-where
-    A: 'a,
-    N: ChunkLength<A> + 'a,
-{
-}
-
-#[cfg(feature = "refpool")]
-mod refpool {
-    use super::*;
-    use ::refpool::{PoolClone, PoolDefault};
-    use std::mem::MaybeUninit;
-
-    impl<A, N> PoolDefault for Chunk<A, N>
-    where
-        N: ChunkLength<A>,
-    {
-        unsafe fn default_uninit(target: &mut MaybeUninit<Self>) {
-            let ptr = target.as_mut_ptr();
-            let left_ptr: *mut usize = &mut (*ptr).left;
-            let right_ptr: *mut usize = &mut (*ptr).right;
-            left_ptr.write(0);
-            right_ptr.write(0);
-        }
-    }
-
-    impl<A, N> PoolClone for Chunk<A, N>
-    where
-        A: Clone,
-        N: ChunkLength<A>,
-    {
-        unsafe fn clone_uninit(&self, target: &mut MaybeUninit<Self>) {
-            let ptr = target.as_mut_ptr();
-            let left_ptr: *mut usize = &mut (*ptr).left;
-            let right_ptr: *mut usize = &mut (*ptr).right;
-            let data_ptr: *mut _ = &mut (*ptr).data;
-            let data_ptr: *mut A = (*data_ptr).as_mut_ptr().cast();
-            left_ptr.write(self.left);
-            right_ptr.write(self.right);
-            for index in self.left..self.right {
-                data_ptr.add(index).write((*self.ptr(index)).clone());
-            }
-        }
-    }
-
-    #[cfg(test)]
-    mod test {
-        use super::*;
-        use ::refpool::{Pool, PoolRef};
-
-        #[test]
-        fn default_and_clone() {
-            let pool: Pool<Chunk<usize>> = Pool::new(16);
-            let mut ref1 = PoolRef::default(&pool);
-            {
-                let chunk = PoolRef::make_mut(&pool, &mut ref1);
-                chunk.push_back(1);
-                chunk.push_back(2);
-                chunk.push_back(3);
-            }
-            let ref2 = ref1.cloned(&pool);
-            let ref3 = PoolRef::clone_from(&pool, &Chunk::from_iter(1..=3));
-            assert_eq!(Chunk::<usize>::from_iter(1..=3), *ref1);
-            assert_eq!(Chunk::<usize>::from_iter(1..=3), *ref2);
-            assert_eq!(Chunk::<usize>::from_iter(1..=3), *ref3);
-            assert_eq!(ref1, ref2);
-            assert_eq!(ref1, ref3);
-            assert_eq!(ref2, ref3);
-            assert!(!PoolRef::ptr_eq(&ref1, &ref2));
-        }
     }
 }
 
