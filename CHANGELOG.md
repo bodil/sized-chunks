@@ -17,6 +17,9 @@ Versioning](http://semver.org/spec/v2.0.0.html).
 - `SparseChunk` now has the methods `option_iter()`, `option_iter_mut()` and
   `option_drain()` with their corresponding iterators to iterate over a chunk
   as if it were an array of `Option`s.
+- [`Arbitrary`](https://docs.rs/arbitrary/latest/arbitrary/trait.Arbitrary.html)
+  implementations for all data types have been added behind the `arbitrary`
+  feature flag.
 
 ## [0.5.1] - 2019-12-12
 

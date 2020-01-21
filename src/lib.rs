@@ -83,6 +83,9 @@ pub mod types;
 #[cfg(test)]
 mod tests;
 
+#[cfg(feature = "arbitrary")]
+mod arbitrary;
+
 pub use crate::inline_array::InlineArray;
 pub use crate::ring_buffer::RingBuffer;
 pub use crate::sized_chunk::Chunk;
