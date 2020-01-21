@@ -578,7 +578,7 @@ where
         let real_index = index + self.left;
         let left_size = index;
         let right_size = self.right - real_index;
-        if self.right == N::USIZE || (self.left > 0 && left_size < right_size) {
+        if self.right == N::USIZE || (self.left >= insert_size && left_size < right_size) {
             unsafe {
                 Chunk::force_copy(self.left, self.left - insert_size, left_size, self);
                 let mut write_index = real_index - insert_size;
@@ -588,7 +588,7 @@ where
                 }
             }
             self.left -= insert_size;
-        } else {
+        } else if self.left == 0 || (self.right + insert_size <= Self::CAPACITY) {
             unsafe {
                 Chunk::force_copy(real_index, real_index + insert_size, right_size, self);
                 let mut write_index = real_index;
@@ -598,6 +598,19 @@ where
                 }
             }
             self.right += insert_size;
+        } else {
+            unsafe {
+                Chunk::force_copy(self.left, 0, left_size, self);
+                Chunk::force_copy(real_index, left_size + insert_size, right_size, self);
+                let mut write_index = left_size;
+                for value in iter {
+                    Chunk::force_write(write_index, value, self);
+                    write_index += 1;
+                }
+            }
+            self.right -= self.left;
+            self.right += insert_size;
+            self.left = 0;
         }
     }
 
