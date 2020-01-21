@@ -14,6 +14,9 @@ Versioning](http://semver.org/spec/v2.0.0.html).
   index in one go.
 - `Chunk` now also has an `insert_ordered` method for inserting values into a
   sorted chunk.
+- `SparseChunk` now has the methods `option_iter()`, `option_iter_mut()` and
+  `option_drain()` with their corresponding iterators to iterate over a chunk
+  as if it were an array of `Option`s.
 
 ## [0.5.1] - 2019-12-12
 

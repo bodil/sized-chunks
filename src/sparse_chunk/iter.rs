@@ -15,6 +15,10 @@ impl<'a, A, N: Bits + ChunkLength<A>> Iterator for Iter<'a, A, N> {
     fn next(&mut self) -> Option<Self::Item> {
         self.indices.next().map(|index| &self.chunk.values()[index])
     }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (0, Some(SparseChunk::<A, N>::CAPACITY))
+    }
 }
 
 /// An iterator over mutable references to the elements of a `SparseChunk`.
@@ -37,6 +41,10 @@ impl<'a, A, N: Bits + ChunkLength<A>> Iterator for IterMut<'a, A, N> {
             None
         }
     }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (0, Some(SparseChunk::<A, N>::CAPACITY))
+    }
 }
 
 /// A draining iterator over the elements of a `SparseChunk`.
@@ -52,5 +60,155 @@ impl<'a, A, N: Bits + ChunkLength<A>> Iterator for Drain<A, N> {
 
     fn next(&mut self) -> Option<Self::Item> {
         self.chunk.pop()
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let len = self.chunk.len();
+        (len, Some(len))
+    }
+}
+
+/// An iterator over `Option`s of references to the elements of a `SparseChunk`.
+///
+/// Iterates over every index in the `SparseChunk`, from zero to its full capacity,
+/// returning an `Option<&A>` for each index.
+pub struct OptionIter<'a, A, N: Bits + ChunkLength<A>> {
+    pub(crate) index: usize,
+    pub(crate) chunk: &'a SparseChunk<A, N>,
+}
+
+impl<'a, A, N: Bits + ChunkLength<A>> Iterator for OptionIter<'a, A, N> {
+    type Item = Option<&'a A>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.index < N::USIZE {
+            let result = self.chunk.get(self.index);
+            self.index += 1;
+            Some(result)
+        } else {
+            None
+        }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (
+            SparseChunk::<A, N>::CAPACITY - self.index,
+            Some(SparseChunk::<A, N>::CAPACITY - self.index),
+        )
+    }
+}
+
+/// An iterator over `Option`s of mutable references to the elements of a `SparseChunk`.
+///
+/// Iterates over every index in the `SparseChunk`, from zero to its full capacity,
+/// returning an `Option<&mut A>` for each index.
+pub struct OptionIterMut<'a, A, N: Bits + ChunkLength<A>> {
+    pub(crate) index: usize,
+    pub(crate) chunk: &'a mut SparseChunk<A, N>,
+}
+
+impl<'a, A, N: Bits + ChunkLength<A>> Iterator for OptionIterMut<'a, A, N> {
+    type Item = Option<&'a mut A>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.index < N::USIZE {
+            let result = if self.chunk.map.get(self.index) {
+                unsafe {
+                    let p: *mut A = &mut self.chunk.values_mut()[self.index];
+                    Some(Some(&mut *p))
+                }
+            } else {
+                Some(None)
+            };
+            self.index += 1;
+            result
+        } else {
+            None
+        }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (
+            SparseChunk::<A, N>::CAPACITY - self.index,
+            Some(SparseChunk::<A, N>::CAPACITY - self.index),
+        )
+    }
+}
+
+/// A draining iterator over `Option`s of the elements of a `SparseChunk`.
+///
+/// Iterates over every index in the `SparseChunk`, from zero to its full capacity,
+/// returning an `Option<A>` for each index.
+pub struct OptionDrain<A, N: Bits + ChunkLength<A>> {
+    pub(crate) index: usize,
+    pub(crate) chunk: SparseChunk<A, N>,
+}
+
+impl<'a, A, N: Bits + ChunkLength<A>> Iterator for OptionDrain<A, N> {
+    type Item = Option<A>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.index < N::USIZE {
+            let result = self.chunk.remove(self.index);
+            self.index += 1;
+            Some(result)
+        } else {
+            None
+        }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (
+            SparseChunk::<A, N>::CAPACITY - self.index,
+            Some(SparseChunk::<A, N>::CAPACITY - self.index),
+        )
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use proptest::{collection::vec, num::usize, option::of, prop_assert, proptest};
+    use typenum::U64;
+
+    proptest! {
+        #[test]
+        fn iter(ref vec in vec(of(usize::ANY), 0..64)) {
+            let chunk: SparseChunk<_, U64> = vec.iter().cloned().collect();
+            let vec: Vec<usize> = vec.iter().cloned().filter(|v| v.is_some()).map(|v| v.unwrap()).collect();
+            prop_assert!(vec.iter().eq(chunk.iter()));
+        }
+
+        #[test]
+        fn iter_mut(ref vec in vec(of(usize::ANY), 0..64)) {
+            let mut chunk: SparseChunk<_, U64> = vec.iter().cloned().collect();
+            let mut vec: Vec<usize> = vec.iter().cloned().filter(|v| v.is_some()).map(|v| v.unwrap()).collect();
+            prop_assert!(vec.iter_mut().eq(chunk.iter_mut()));
+        }
+
+        #[test]
+        fn drain(ref vec in vec(of(usize::ANY), 0..64)) {
+            let chunk: SparseChunk<_, U64> = vec.iter().cloned().collect();
+            let vec: Vec<usize> = vec.iter().cloned().filter(|v| v.is_some()).map(|v| v.unwrap()).collect();
+            prop_assert!(vec.into_iter().eq(chunk.into_iter()));
+        }
+
+        #[test]
+        fn option_iter(ref vec in vec(of(usize::ANY), 64)) {
+            let chunk: SparseChunk<_, U64> = vec.iter().cloned().collect();
+            prop_assert!(vec.iter().cloned().eq(chunk.option_iter().map(|v| v.cloned())));
+        }
+
+        #[test]
+        fn option_iter_mut(ref vec in vec(of(usize::ANY), 64)) {
+            let mut chunk: SparseChunk<_, U64> = vec.iter().cloned().collect();
+            prop_assert!(vec.iter().cloned().eq(chunk.option_iter_mut().map(|v| v.cloned())));
+        }
+
+        #[test]
+        fn option_drain(ref vec in vec(of(usize::ANY), 64)) {
+            let chunk: SparseChunk<_, U64> = vec.iter().cloned().collect();
+            prop_assert!(vec.iter().cloned().eq(chunk.option_drain()));
+        }
     }
 }

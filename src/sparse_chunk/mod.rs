@@ -8,6 +8,7 @@
 
 use std::collections::{BTreeMap, HashMap};
 use std::fmt::{Debug, Error, Formatter};
+use std::iter::FromIterator;
 use std::mem::{self, MaybeUninit};
 use std::ops::Index;
 use std::ops::IndexMut;
@@ -21,7 +22,7 @@ use bitmaps::{Bitmap, Bits, Iter as BitmapIter};
 use crate::types::ChunkLength;
 
 mod iter;
-pub use self::iter::{Drain, Iter, IterMut};
+pub use self::iter::{Drain, Iter, IterMut, OptionDrain, OptionIter, OptionIterMut};
 
 #[cfg(feature = "refpool")]
 mod refpool;
@@ -260,6 +261,39 @@ where
     pub fn entries(&self) -> impl Iterator<Item = (usize, &A)> {
         self.indices().zip(self.iter())
     }
+
+    /// Make an iterator of `Option`s of references to the values contained in the array.
+    ///
+    /// Iterates over every index in the `SparseChunk`, from zero to its full capacity,
+    /// returning an `Option<&A>` for each index.
+    pub fn option_iter(&self) -> OptionIter<'_, A, N> {
+        OptionIter {
+            chunk: self,
+            index: 0,
+        }
+    }
+
+    /// Make an iterator of `Option`s of mutable references to the values contained in the array.
+    ///
+    /// Iterates over every index in the `SparseChunk`, from zero to its full capacity,
+    /// returning an `Option<&mut A>` for each index.
+    pub fn option_iter_mut(&mut self) -> OptionIterMut<'_, A, N> {
+        OptionIterMut {
+            chunk: self,
+            index: 0,
+        }
+    }
+
+    /// Make a draining iterator of `Option's of the values contained in the array.
+    ///
+    /// Iterates over every index in the `SparseChunk`, from zero to its full capacity,
+    /// returning an `Option<A>` for each index.
+    pub fn option_drain(self) -> OptionDrain<A, N> {
+        OptionDrain {
+            chunk: self,
+            index: 0,
+        }
+    }
 }
 
 impl<A, N: Bits + ChunkLength<A>> Default for SparseChunk<A, N> {
@@ -291,6 +325,21 @@ impl<A, N: Bits + ChunkLength<A>> IntoIterator for SparseChunk<A, N> {
     #[inline]
     fn into_iter(self) -> Self::IntoIter {
         self.drain()
+    }
+}
+
+impl<A, N: Bits + ChunkLength<A>> FromIterator<Option<A>> for SparseChunk<A, N> {
+    fn from_iter<I>(iter: I) -> Self
+    where
+        I: IntoIterator<Item = Option<A>>,
+    {
+        let mut out = Self::new();
+        for (index, value) in iter.into_iter().enumerate() {
+            if let Some(value) = value {
+                out.insert(index, value);
+            }
+        }
+        out
     }
 }
 
