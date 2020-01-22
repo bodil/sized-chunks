@@ -1,0 +1,21 @@
+name: Daily Fuzz
+on:
+    schedule:
+        - cron: "8 0 * * *"
+
+jobs:
+    fuzz:
+        runs-on: ${{ matrix.os }}
+        strategy:
+            matrix:
+                os: [ubuntu-latest, macOS-latest]
+                fuzz-target: [sized_chunk, sparse_chunk, ring_buffer, inline_array]
+        steps:
+            - uses: hecrj/setup-rust-action@v1
+              with:
+                  rust-version: nightly
+            - name: Install cargo-fuzz
+              run: cargo install cargo-fuzz
+            - uses: actions/checkout@v1
+            - name: Fuzz away
+              run: cargo fuzz run -j 8 ${{ matrix.fuzz-target }} -- -max_total_time=10m

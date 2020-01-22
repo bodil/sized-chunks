@@ -199,7 +199,7 @@ proptest! {
                     assert_eq!(chunk.pop_back(), guide.pop());
                 }
                 Action::DropLeft(index) => {
-                    if index >= chunk.len() {
+                    if index > chunk.len() {
                         assert!(catch_unwind(AssertUnwindSafe(|| chunk.drop_left(index))).is_err());
                     } else {
                         chunk.drop_left(index);
@@ -207,7 +207,7 @@ proptest! {
                     }
                 }
                 Action::DropRight(index) => {
-                    if index >= chunk.len() {
+                    if index > chunk.len() {
                         assert!(catch_unwind(AssertUnwindSafe(|| chunk.drop_right(index))).is_err());
                     } else {
                         chunk.drop_right(index);
@@ -215,7 +215,7 @@ proptest! {
                     }
                 }
                 Action::SplitOff(index) => {
-                    if index >= chunk.len() {
+                    if index > chunk.len() {
                         assert!(catch_unwind(AssertUnwindSafe(|| chunk.split_off(index))).is_err());
                     } else {
                         let chunk_off = chunk.split_off(index);
@@ -236,7 +236,7 @@ proptest! {
                 Action::DrainFromFront(other, count) => {
                     let mut other = other.make();
                     let mut other_guide: Vec<_> = other.iter().cloned().collect();
-                    if count >= other.len() || chunk.len() + count > capacity {
+                    if count > other.len() || chunk.len() + count > capacity {
                         assert!(catch_unwind(AssertUnwindSafe(|| chunk.drain_from_front(&mut other, count))).is_err());
                     } else {
                         chunk.drain_from_front(&mut other, count);
@@ -247,11 +247,11 @@ proptest! {
                 Action::DrainFromBack(other, count) => {
                     let mut other = other.make();
                     let mut other_guide: Vec<_> = other.iter().cloned().collect();
-                    if count >= other.len() || chunk.len() + count > capacity {
+                    if count > other.len() || chunk.len() + count > capacity {
                         assert!(catch_unwind(AssertUnwindSafe(|| chunk.drain_from_back(&mut other, count))).is_err());
                     } else {
-                        chunk.drain_from_back(&mut other, count);
                         let other_index = other.len() - count;
+                        chunk.drain_from_back(&mut other, count);
                         guide = other_guide.drain(other_index..).chain(guide.into_iter()).collect();
                         assert_eq!(other, other_guide);
                     }
@@ -265,7 +265,7 @@ proptest! {
                     }
                 }
                 Action::Insert(index, value) => {
-                    if index >= chunk.len() || chunk.is_full() {
+                    if index > chunk.len() || chunk.is_full() {
                         assert!(catch_unwind(AssertUnwindSafe(|| chunk.insert(index, value))).is_err());
                     } else {
                         chunk.insert(index, value);

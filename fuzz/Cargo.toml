@@ -1,0 +1,37 @@
+[package]
+name = "sized-chunks-fuzz"
+version = "0.0.0"
+authors = ["Automatically generated"]
+publish = false
+edition = "2018"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.2"
+arbitrary = { version = "0.3.3", features = ["derive"] }
+
+[dependencies.sized-chunks]
+path = ".."
+features = ["arbitrary"]
+
+# Prevent this from interfering with workspaces
+[workspace]
+members = ["."]
+
+[[bin]]
+name = "sized_chunk"
+path = "fuzz_targets/sized_chunk.rs"
+
+[[bin]]
+name = "sparse_chunk"
+path = "fuzz_targets/sparse_chunk.rs"
+
+[[bin]]
+name = "inline_array"
+path = "fuzz_targets/inline_array.rs"
+
+[[bin]]
+name = "ring_buffer"
+path = "fuzz_targets/ring_buffer.rs"

@@ -62,7 +62,7 @@ proptest! {
                     }
                 }
                 Action::Insert(index, value) => {
-                    if index >= chunk.len() || chunk.is_full() {
+                    if index > chunk.len() || chunk.is_full() {
                         assert!(catch_unwind(AssertUnwindSafe(|| chunk.insert(index, value))).is_err());
                     } else {
                         chunk.insert(index, value);
@@ -77,7 +77,7 @@ proptest! {
                     }
                 }
                 Action::SplitOff(index) => {
-                    if index >= chunk.len() {
+                    if index > chunk.len() {
                         assert!(catch_unwind(AssertUnwindSafe(|| chunk.split_off(index))).is_err());
                     } else {
                         let chunk_off = chunk.split_off(index);
