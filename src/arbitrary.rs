@@ -5,7 +5,7 @@
 use bitmaps::Bits;
 use std::iter;
 
-use ::arbitrary::{Arbitrary, Result, Unstructured};
+use ::arbitrary::{size_hint, Arbitrary, Result, Unstructured};
 
 use crate::{types::ChunkLength, Chunk, InlineArray, RingBuffer, SparseChunk};
 
@@ -55,9 +55,11 @@ where
         u.arbitrary_take_rest_iter()?.take(Self::CAPACITY).collect()
     }
 
-    fn size_hint() -> (usize, Option<usize>) {
-        let (_, upper) = A::size_hint();
-        (0, upper.map(|upper| upper * Self::CAPACITY))
+    fn size_hint(depth: usize) -> (usize, Option<usize>) {
+        size_hint::recursion_guard(depth, |depth| {
+            let (_, upper) = A::size_hint(depth);
+            (0, upper.map(|upper| upper * Self::CAPACITY))
+        })
     }
 
     fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
@@ -79,9 +81,11 @@ where
         u.arbitrary_take_rest_iter()?.take(Self::CAPACITY).collect()
     }
 
-    fn size_hint() -> (usize, Option<usize>) {
-        let (_, upper) = A::size_hint();
-        (0, upper.map(|upper| upper * Self::CAPACITY))
+    fn size_hint(depth: usize) -> (usize, Option<usize>) {
+        size_hint::recursion_guard(depth, |depth| {
+            let (_, upper) = A::size_hint(depth);
+            (0, upper.map(|upper| upper * Self::CAPACITY))
+        })
     }
 
     fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
@@ -104,9 +108,11 @@ where
         u.arbitrary_take_rest_iter()?.take(Self::CAPACITY).collect()
     }
 
-    fn size_hint() -> (usize, Option<usize>) {
-        let (_, upper) = Option::<A>::size_hint();
-        (0, upper.map(|upper| upper * Self::CAPACITY))
+    fn size_hint(depth: usize) -> (usize, Option<usize>) {
+        size_hint::recursion_guard(depth, |depth| {
+            let (_, upper) = Option::<A>::size_hint(depth);
+            (0, upper.map(|upper| upper * Self::CAPACITY))
+        })
     }
 
     fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
@@ -128,9 +134,11 @@ where
         u.arbitrary_take_rest_iter()?.take(Self::CAPACITY).collect()
     }
 
-    fn size_hint() -> (usize, Option<usize>) {
-        let (_, upper) = A::size_hint();
-        (0, upper.map(|upper| upper * Self::CAPACITY))
+    fn size_hint(depth: usize) -> (usize, Option<usize>) {
+        size_hint::recursion_guard(depth, |depth| {
+            let (_, upper) = A::size_hint(depth);
+            (0, upper.map(|upper| upper * Self::CAPACITY))
+        })
     }
 
     fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
