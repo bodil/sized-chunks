@@ -481,3 +481,27 @@ where
         }
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::tests::DropTest;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    #[test]
+    fn dropping() {
+        let counter = AtomicUsize::new(0);
+        {
+            let mut chunk: InlineArray<DropTest<'_>, [usize; 32]> = InlineArray::new();
+            for _i in 0..16 {
+                chunk.push(DropTest::new(&counter));
+            }
+            assert_eq!(16, counter.load(Ordering::Relaxed));
+            for _i in 0..8 {
+                chunk.pop();
+            }
+            assert_eq!(8, counter.load(Ordering::Relaxed));
+        }
+        assert_eq!(0, counter.load(Ordering::Relaxed));
+    }
+}

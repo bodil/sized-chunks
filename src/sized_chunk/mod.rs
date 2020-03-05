@@ -1157,24 +1157,8 @@ mod test {
         assert_eq!(should_vec, out_vec);
     }
 
+    use crate::tests::DropTest;
     use std::sync::atomic::{AtomicUsize, Ordering};
-
-    struct DropTest<'a> {
-        counter: &'a AtomicUsize,
-    }
-
-    impl<'a> DropTest<'a> {
-        fn new(counter: &'a AtomicUsize) -> Self {
-            counter.fetch_add(1, Ordering::Relaxed);
-            DropTest { counter }
-        }
-    }
-
-    impl<'a> Drop for DropTest<'a> {
-        fn drop(&mut self) {
-            self.counter.fetch_sub(1, Ordering::Relaxed);
-        }
-    }
 
     #[test]
     fn dropping() {

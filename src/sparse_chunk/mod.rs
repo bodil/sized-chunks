@@ -72,7 +72,7 @@ impl<A, N: Bits + ChunkLength<A>> Drop for SparseChunk<A, N> {
         if mem::needs_drop::<A>() {
             let bits = self.map;
             for index in &bits {
-                unsafe { SparseChunk::force_drop(index, self) }
+                unsafe { ptr::drop_in_place(&mut self.values_mut()[index]) }
             }
         }
     }
@@ -115,12 +115,6 @@ where
     #[inline]
     unsafe fn force_write(index: usize, value: A, chunk: &mut Self) {
         ptr::write(&mut chunk.values_mut()[index as usize], value)
-    }
-
-    /// Drop the value at an index
-    #[inline]
-    unsafe fn force_drop(index: usize, chunk: &mut Self) {
-        ptr::drop_in_place(&mut chunk.values_mut()[index])
     }
 
     /// Construct a new empty chunk.
@@ -370,7 +364,7 @@ where
         if self.len() != other.len() {
             return false;
         }
-        for index in 0..N::USIZE {
+        for index in self.indices() {
             if self.get(index) != other.get(&index) {
                 return false;
             }
@@ -388,7 +382,7 @@ where
         if self.len() != other.len() {
             return false;
         }
-        for index in 0..N::USIZE {
+        for index in self.indices() {
             if self.get(index) != other.get(&index) {
                 return false;
             }
@@ -453,5 +447,44 @@ mod test {
         assert_eq!(left_indices, right_indices);
         assert_eq!(vec![1, 5, 22, 24], left_indices);
         assert_eq!(vec![1, 5, 22, 24], right_indices);
+    }
+
+    use crate::tests::DropTest;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    #[test]
+    fn dropping() {
+        let counter = AtomicUsize::new(0);
+        {
+            let mut chunk: SparseChunk<DropTest<'_>> = SparseChunk::new();
+            for i in 0..40 {
+                chunk.insert(i, DropTest::new(&counter));
+            }
+            assert_eq!(40, counter.load(Ordering::Relaxed));
+            for i in 0..20 {
+                chunk.remove(i);
+            }
+            assert_eq!(20, counter.load(Ordering::Relaxed));
+        }
+        assert_eq!(0, counter.load(Ordering::Relaxed));
+    }
+
+    #[test]
+    fn equality() {
+        let mut c1 = SparseChunk::<usize>::new();
+        for i in 0..32 {
+            c1.insert(i, i);
+        }
+        let mut c2 = c1.clone();
+        assert_eq!(c1, c2);
+        for i in 4..8 {
+            c2.insert(i, 0);
+        }
+        assert_ne!(c1, c2);
+        c2 = c1.clone();
+        for i in 0..16 {
+            c2.remove(i);
+        }
+        assert_ne!(c1, c2);
     }
 }
