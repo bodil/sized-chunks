@@ -177,7 +177,7 @@ impl<A, T> InlineArray<A, T> {
     ///
     /// Time: O(1)
     pub fn push(&mut self, value: A) {
-        if self.is_full() {
+        if cfg!(debug_assertions) && self.is_full() {
             panic!("InlineArray::push: chunk size overflow");
         }
         unsafe {
@@ -209,10 +209,10 @@ impl<A, T> InlineArray<A, T> {
     ///
     /// Time: O(n) for the number of items shifted
     pub fn insert(&mut self, index: usize, value: A) {
-        if self.is_full() {
+        if cfg!(debug_assertions) && self.is_full() {
             panic!("InlineArray::push: chunk size overflow");
         }
-        if index > self.len() {
+        if cfg!(debug_assertions) && index > self.len() {
             panic!("InlineArray::insert: index out of bounds");
         }
         unsafe {
@@ -252,7 +252,7 @@ impl<A, T> InlineArray<A, T> {
     ///
     /// Time: O(n) for the number of items in the new chunk
     pub fn split_off(&mut self, index: usize) -> Self {
-        if index > self.len() {
+        if cfg!(debug_assertions) && index > self.len() {
             panic!("InlineArray::split_off: index out of bounds");
         }
         let mut out = Self::new();

@@ -162,7 +162,7 @@ where
     ///
     /// Returns the previous value at that index, if any.
     pub fn insert(&mut self, index: usize, value: A) -> Option<A> {
-        if index >= N::USIZE {
+        if cfg!(debug_assertions) && index >= N::USIZE {
             panic!("SparseChunk::insert: index out of bounds");
         }
         if self.map.set(index, true) {
@@ -177,7 +177,7 @@ where
     ///
     /// Returns the value, or `None` if the index had no value.
     pub fn remove(&mut self, index: usize) -> Option<A> {
-        if index >= N::USIZE {
+        if cfg!(debug_assertions) && index >= N::USIZE {
             panic!("SparseChunk::remove: index out of bounds");
         }
         if self.map.set(index, false) {
