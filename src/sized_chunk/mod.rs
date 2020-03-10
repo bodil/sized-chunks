@@ -300,7 +300,7 @@ where
     ///
     /// Time: O(1) if there's room at the front, O(n) otherwise
     pub fn push_front(&mut self, value: A) {
-        if cfg!(debug_assertions) && self.is_full() {
+        if self.is_full() {
             panic!("Chunk::push_front: can't push to full chunk");
         }
         if self.is_empty() {
@@ -321,7 +321,7 @@ where
     ///
     /// Time: O(1) if there's room at the back, O(n) otherwise
     pub fn push_back(&mut self, value: A) {
-        if cfg!(debug_assertions) && self.is_full() {
+        if self.is_full() {
             panic!("Chunk::push_back: can't push to full chunk");
         }
         if self.is_empty() {
@@ -342,12 +342,13 @@ where
     ///
     /// Time: O(1)
     pub fn pop_front(&mut self) -> A {
-        if cfg!(debug_assertions) && self.is_empty() {
+        if self.is_empty() {
             panic!("Chunk::pop_front: can't pop from empty chunk");
+        } else {
+            let value = unsafe { Chunk::force_read(self.left, self) };
+            self.left += 1;
+            value
         }
-        let value = unsafe { Chunk::force_read(self.left, self) };
-        self.left += 1;
-        value
     }
 
     /// Pop an item off the back of the chunk.
@@ -356,7 +357,7 @@ where
     ///
     /// Time: O(1)
     pub fn pop_back(&mut self) -> A {
-        if cfg!(debug_assertions) && self.is_empty() {
+        if self.is_empty() {
             panic!("Chunk::pop_back: can't pop from empty chunk");
         } else {
             self.right -= 1;
@@ -396,7 +397,7 @@ where
     ///
     /// Time: O(n) for the number of items in the new chunk
     pub fn split_off(&mut self, index: usize) -> Self {
-        if cfg!(debug_assertions) && index > self.len() {
+        if index > self.len() {
             panic!("Chunk::split_off: index out of bounds");
         }
         if index == self.len() {
@@ -419,7 +420,7 @@ where
     pub fn append(&mut self, other: &mut Self) {
         let self_len = self.len();
         let other_len = other.len();
-        if cfg!(debug_assertions) && self_len + other_len > N::USIZE {
+        if self_len + other_len > N::USIZE {
             panic!("Chunk::append: chunk size overflow");
         }
         if self.right + other_len > N::USIZE {
@@ -443,8 +444,8 @@ where
     pub fn drain_from_front(&mut self, other: &mut Self, count: usize) {
         let self_len = self.len();
         let other_len = other.len();
-        debug_assert!(self_len + count <= N::USIZE);
-        debug_assert!(other_len >= count);
+        assert!(self_len + count <= N::USIZE);
+        assert!(other_len >= count);
         if self.right + count > N::USIZE {
             unsafe { Chunk::force_copy(self.left, 0, self_len, self) };
             self.right -= self.left;
@@ -465,8 +466,8 @@ where
     pub fn drain_from_back(&mut self, other: &mut Self, count: usize) {
         let self_len = self.len();
         let other_len = other.len();
-        debug_assert!(self_len + count <= N::USIZE);
-        debug_assert!(other_len >= count);
+        assert!(self_len + count <= N::USIZE);
+        assert!(other_len >= count);
         if self.left < count {
             unsafe { Chunk::force_copy(self.left, N::USIZE - self_len, self_len, self) };
             self.left = N::USIZE - self_len;
@@ -493,10 +494,10 @@ where
     ///
     /// Time: O(n) for the number of elements shifted
     pub fn insert(&mut self, index: usize, value: A) {
-        if cfg!(debug_assertions) && self.is_full() {
+        if self.is_full() {
             panic!("Chunk::insert: chunk is full");
         }
-        if cfg!(debug_assertions) && index > self.len() {
+        if index > self.len() {
             panic!("Chunk::insert: index out of bounds");
         }
         let real_index = index + self.left;
@@ -540,7 +541,7 @@ where
     where
         A: Ord,
     {
-        if cfg!(debug_assertions) && self.is_full() {
+        if self.is_full() {
             panic!("Chunk::insert: chunk is full");
         }
         match self.binary_search(&value) {
@@ -565,13 +566,13 @@ where
     {
         let iter = iter.into_iter();
         let insert_size = iter.len();
-        if cfg!(debug_assertions) && self.len() + insert_size > Self::CAPACITY {
+        if self.len() + insert_size > Self::CAPACITY {
             panic!(
                 "Chunk::insert_from: chunk cannot fit {} elements",
                 insert_size
             );
         }
-        if cfg!(debug_assertions) && index > self.len() {
+        if index > self.len() {
             panic!("Chunk::insert_from: index out of bounds");
         }
         let real_index = index + self.left;
@@ -622,7 +623,7 @@ where
     ///
     /// Time: O(n) for the number of items shifted
     pub fn remove(&mut self, index: usize) -> A {
-        if cfg!(debug_assertions) && index >= self.len() {
+        if index >= self.len() {
             panic!("Chunk::remove: index out of bounds");
         }
         let real_index = index + self.left;

@@ -253,7 +253,7 @@ where
         I: Iterator<Item = A>,
     {
         let buffer = Self::from_iter(iter.take(count));
-        if cfg!(debug_assertions) && buffer.len() < count {
+        if buffer.len() < count {
             panic!("RingBuffer::collect_from: underfull iterator");
         }
         buffer
@@ -342,7 +342,7 @@ where
                 Bound::Excluded(index) => *index,
             },
         };
-        if cfg!(debug_assertions) && new_range.end > self.len() || new_range.start > new_range.end {
+        if new_range.end > self.len() || new_range.start > new_range.end {
             panic!("Slice::parse_range: index out of bounds");
         }
         new_range
@@ -428,7 +428,7 @@ where
     ///
     /// Time: O(1)
     pub fn push_back(&mut self, value: A) {
-        if cfg!(debug_assertions) && self.is_full() {
+        if self.is_full() {
             panic!("RingBuffer::push_back: can't push to a full buffer")
         } else {
             unsafe { self.force_write(self.raw(self.length), value) }
@@ -442,7 +442,7 @@ where
     ///
     /// Time: O(1)
     pub fn push_front(&mut self, value: A) {
-        if cfg!(debug_assertions) && self.is_full() {
+        if self.is_full() {
             panic!("RingBuffer::push_front: can't push to a full buffer")
         } else {
             let origin = self.origin.dec();
@@ -487,7 +487,7 @@ where
     /// Time: O(n) for the number of items dropped
     pub fn drop_left(&mut self, index: usize) {
         if index > 0 {
-            if cfg!(debug_assertions) && index > self.len() {
+            if index > self.len() {
                 panic!("RingBuffer::drop_left: index out of bounds");
             }
             for i in self.range().take(index) {
@@ -504,7 +504,7 @@ where
     ///
     /// Time: O(n) for the number of items dropped
     pub fn drop_right(&mut self, index: usize) {
-        if cfg!(debug_assertions) && index > self.len() {
+        if index > self.len() {
             panic!("RingBuffer::drop_right: index out of bounds");
         }
         if index == self.len() {
@@ -525,7 +525,7 @@ where
     /// Time: O(n) for the number of items in the new buffer
     #[must_use]
     pub fn split_off(&mut self, index: usize) -> Self {
-        if cfg!(debug_assertions) && index > self.len() {
+        if index > self.len() {
             panic!("RingBuffer::split: index out of bounds");
         }
         if index == self.len() {
@@ -561,10 +561,10 @@ where
     pub fn drain_from_front(&mut self, other: &mut Self, count: usize) {
         let self_len = self.len();
         let other_len = other.len();
-        if cfg!(debug_assertions) && self_len + count > Self::CAPACITY {
+        if self_len + count > Self::CAPACITY {
             panic!("RingBuffer::drain_from_front: chunk size overflow");
         }
-        if cfg!(debug_assertions) && other_len < count {
+        if other_len < count {
             panic!("RingBuffer::drain_from_front: index out of bounds");
         }
         unsafe { self.copy_from(other, other.origin, self.raw(self.len()), count) };
@@ -583,10 +583,10 @@ where
     pub fn drain_from_back(&mut self, other: &mut Self, count: usize) {
         let self_len = self.len();
         let other_len = other.len();
-        if cfg!(debug_assertions) && self_len + count > Self::CAPACITY {
+        if self_len + count > Self::CAPACITY {
             panic!("RingBuffer::drain_from_back: chunk size overflow");
         }
-        if cfg!(debug_assertions) && other_len < count {
+        if other_len < count {
             panic!("RingBuffer::drain_from_back: index out of bounds");
         }
         self.origin -= count;
@@ -612,10 +612,10 @@ where
     ///
     /// Time: O(n) for the number of items shifted
     pub fn insert(&mut self, index: usize, value: A) {
-        if cfg!(debug_assertions) && self.is_full() {
+        if self.is_full() {
             panic!("RingBuffer::insert: chunk size overflow");
         }
-        if cfg!(debug_assertions) && index > self.len() {
+        if index > self.len() {
             panic!("RingBuffer::insert: index out of bounds");
         }
         if index == 0 {
@@ -656,7 +656,7 @@ where
     ///
     /// Time: O(n) for the number of items shifted
     pub fn remove(&mut self, index: usize) -> A {
-        if cfg!(debug_assertions) && index >= self.len() {
+        if index >= self.len() {
             panic!("RingBuffer::remove: index out of bounds");
         }
         let value = unsafe { self.force_read(self.raw(index)) };
@@ -729,7 +729,7 @@ where
 
     #[must_use]
     fn index(&self, index: usize) -> &Self::Output {
-        if cfg!(debug_assertions) && index >= self.len() {
+        if index >= self.len() {
             panic!(
                 "RingBuffer::index: index out of bounds {} >= {}",
                 index,
@@ -746,7 +746,7 @@ where
 {
     #[must_use]
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
-        if cfg!(debug_assertions) && index >= self.len() {
+        if index >= self.len() {
             panic!(
                 "RingBuffer::index_mut: index out of bounds {} >= {}",
                 index,
