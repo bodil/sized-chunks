@@ -3,6 +3,10 @@ rust:
     - stable
     - beta
     - nightly
+arch:
+    - amd64
+    - arm64
+    - ppc64le
 cache:
     directories:
         - /home/travis/.rustup
@@ -37,6 +41,7 @@ matrix:
           install:
               - rustup component add clippy; true
           script: cargo clippy -- -D warnings
+
         - name: Coveralls
           arch: amd64
           rust: stable
