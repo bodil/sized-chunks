@@ -1,22 +1,48 @@
 language: rust
 rust:
-  - stable
-  - beta
-  - nightly
+    - stable
+    - beta
+    - nightly
 cache:
-  directories:
-    - /home/travis/.rustup
-    - /home/travis/.cargo
-    - /home/travis/target
+    directories:
+        - /home/travis/.rustup
+        - /home/travis/.cargo
+        - /home/travis/target
+
+addons:
+    apt:
+        packages:
+            - cmake
+            - g++
+            - pkg-config
+            - jq
+            - libcurl4-openssl-dev
+            - libelf-dev
+            - libdw-dev
+            - binutils-dev
+            - libiberty-dev
 
 install:
-  - rustup update
-  - mkdir -p .cargo && echo '[build]' > .cargo/config && echo 'target-dir = "/home/travis/target"' >> .cargo/config
+    - rustup update
+    - mkdir -p .cargo
+    - echo '[build]' > .cargo/config
+    - echo 'target-dir = "/home/travis/target"' >> .cargo/config
 
 matrix:
-  include:
-    - env: CLIPPY=1
-      rust: stable
-      install:
-        - rustup component add clippy; true
-      script: cargo clippy -- -D warnings
+    include:
+        - name: Clippy
+          arch: amd64
+          rust: stable
+          env: CLIPPY=1
+          install:
+              - rustup component add clippy; true
+          script: cargo clippy -- -D warnings
+        - name: Coveralls
+          arch: amd64
+          rust: stable
+          install:
+              - cargo install cargo-kcov; true
+              - cargo kcov --print-install-kcov-sh | sh
+          script:
+              - cargo build --tests --all-features
+              - cargo kcov --features refpool,arbitrary --coveralls
