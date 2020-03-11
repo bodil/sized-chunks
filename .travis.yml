@@ -17,14 +17,9 @@ addons:
     apt:
         packages:
             - cmake
-            - g++
+            - libssl-dev
             - pkg-config
-            - jq
-            - libcurl4-openssl-dev
-            - libelf-dev
-            - libdw-dev
-            - binutils-dev
-            - libiberty-dev
+            - zlib1g-dev
 
 install:
     - rustup update
@@ -44,10 +39,9 @@ matrix:
 
         - name: Coveralls
           arch: amd64
-          rust: stable
+          rust: nightly
           install:
-              - cargo install cargo-kcov; true
-              - cargo kcov --print-install-kcov-sh | sh
-          script:
-              - cargo build --tests --all-features
-              - cargo kcov --features refpool,arbitrary --coveralls
+              - cargo install cargo-tarpaulin; true
+          script: |
+              cargo tarpaulin --ignore-tests --run-types Tests --run-types Doctests \
+              --exclude-files 'fuzz/*' --coveralls $TRAVIS_JOB_ID --ciserver travis-ci
