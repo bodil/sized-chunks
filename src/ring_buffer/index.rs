@@ -6,11 +6,11 @@ use std::iter::FusedIterator;
 use std::marker::PhantomData;
 use std::ops::{Add, AddAssign, Sub, SubAssign};
 
-use crate::types::ChunkLength;
+use typenum::Unsigned;
 
-pub(crate) struct RawIndex<A, N: ChunkLength<A>>(usize, PhantomData<(A, N)>);
+pub(crate) struct RawIndex<N: Unsigned>(usize, PhantomData<N>);
 
-impl<A, N: ChunkLength<A>> Clone for RawIndex<A, N> {
+impl<N: Unsigned> Clone for RawIndex<N> {
     #[inline]
     #[must_use]
     fn clone(&self) -> Self {
@@ -18,9 +18,9 @@ impl<A, N: ChunkLength<A>> Clone for RawIndex<A, N> {
     }
 }
 
-impl<A, N> Copy for RawIndex<A, N> where N: ChunkLength<A> {}
+impl<N> Copy for RawIndex<N> where N: Unsigned {}
 
-impl<A, N: ChunkLength<A>> RawIndex<A, N> {
+impl<N: Unsigned> RawIndex<N> {
     #[inline]
     #[must_use]
     pub(crate) fn to_usize(self) -> usize {
@@ -53,7 +53,7 @@ impl<A, N: ChunkLength<A>> RawIndex<A, N> {
     }
 }
 
-impl<A, N: ChunkLength<A>> From<usize> for RawIndex<A, N> {
+impl<N: Unsigned> From<usize> for RawIndex<N> {
     #[inline]
     #[must_use]
     fn from(index: usize) -> Self {
@@ -62,7 +62,7 @@ impl<A, N: ChunkLength<A>> From<usize> for RawIndex<A, N> {
     }
 }
 
-impl<A, N: ChunkLength<A>> PartialEq for RawIndex<A, N> {
+impl<N: Unsigned> PartialEq for RawIndex<N> {
     #[inline]
     #[must_use]
     fn eq(&self, other: &Self) -> bool {
@@ -70,10 +70,10 @@ impl<A, N: ChunkLength<A>> PartialEq for RawIndex<A, N> {
     }
 }
 
-impl<A, N: ChunkLength<A>> Eq for RawIndex<A, N> {}
+impl<N: Unsigned> Eq for RawIndex<N> {}
 
-impl<A, N: ChunkLength<A>> Add for RawIndex<A, N> {
-    type Output = RawIndex<A, N>;
+impl<N: Unsigned> Add for RawIndex<N> {
+    type Output = RawIndex<N>;
     #[inline]
     #[must_use]
     fn add(self, other: Self) -> Self::Output {
@@ -81,8 +81,8 @@ impl<A, N: ChunkLength<A>> Add for RawIndex<A, N> {
     }
 }
 
-impl<A, N: ChunkLength<A>> Add<usize> for RawIndex<A, N> {
-    type Output = RawIndex<A, N>;
+impl<N: Unsigned> Add<usize> for RawIndex<N> {
+    type Output = RawIndex<N>;
     #[inline]
     #[must_use]
     fn add(self, other: usize) -> Self::Output {
@@ -94,7 +94,7 @@ impl<A, N: ChunkLength<A>> Add<usize> for RawIndex<A, N> {
     }
 }
 
-impl<A, N: ChunkLength<A>> AddAssign<usize> for RawIndex<A, N> {
+impl<N: Unsigned> AddAssign<usize> for RawIndex<N> {
     #[inline]
     fn add_assign(&mut self, other: usize) {
         self.0 += other;
@@ -104,8 +104,8 @@ impl<A, N: ChunkLength<A>> AddAssign<usize> for RawIndex<A, N> {
     }
 }
 
-impl<A, N: ChunkLength<A>> Sub for RawIndex<A, N> {
-    type Output = RawIndex<A, N>;
+impl<N: Unsigned> Sub for RawIndex<N> {
+    type Output = RawIndex<N>;
     #[inline]
     #[must_use]
     fn sub(self, other: Self) -> Self::Output {
@@ -113,8 +113,8 @@ impl<A, N: ChunkLength<A>> Sub for RawIndex<A, N> {
     }
 }
 
-impl<A, N: ChunkLength<A>> Sub<usize> for RawIndex<A, N> {
-    type Output = RawIndex<A, N>;
+impl<N: Unsigned> Sub<usize> for RawIndex<N> {
+    type Output = RawIndex<N>;
     #[inline]
     #[must_use]
     fn sub(self, other: usize) -> Self::Output {
@@ -126,7 +126,7 @@ impl<A, N: ChunkLength<A>> Sub<usize> for RawIndex<A, N> {
     }
 }
 
-impl<A, N: ChunkLength<A>> SubAssign<usize> for RawIndex<A, N> {
+impl<N: Unsigned> SubAssign<usize> for RawIndex<N> {
     #[inline]
     fn sub_assign(&mut self, other: usize) {
         while other > self.0 {
@@ -136,14 +136,14 @@ impl<A, N: ChunkLength<A>> SubAssign<usize> for RawIndex<A, N> {
     }
 }
 
-pub(crate) struct IndexIter<A, N: ChunkLength<A>> {
+pub(crate) struct IndexIter<N: Unsigned> {
     pub(crate) remaining: usize,
-    pub(crate) left_index: RawIndex<A, N>,
-    pub(crate) right_index: RawIndex<A, N>,
+    pub(crate) left_index: RawIndex<N>,
+    pub(crate) right_index: RawIndex<N>,
 }
 
-impl<A, N: ChunkLength<A>> Iterator for IndexIter<A, N> {
-    type Item = RawIndex<A, N>;
+impl<N: Unsigned> Iterator for IndexIter<N> {
+    type Item = RawIndex<N>;
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
         if self.remaining > 0 {
@@ -161,7 +161,7 @@ impl<A, N: ChunkLength<A>> Iterator for IndexIter<A, N> {
     }
 }
 
-impl<A, N: ChunkLength<A>> DoubleEndedIterator for IndexIter<A, N> {
+impl<N: Unsigned> DoubleEndedIterator for IndexIter<N> {
     #[inline]
     fn next_back(&mut self) -> Option<Self::Item> {
         if self.remaining > 0 {
@@ -173,6 +173,6 @@ impl<A, N: ChunkLength<A>> DoubleEndedIterator for IndexIter<A, N> {
     }
 }
 
-impl<A, N: ChunkLength<A>> ExactSizeIterator for IndexIter<A, N> {}
+impl<N: Unsigned> ExactSizeIterator for IndexIter<N> {}
 
-impl<A, N: ChunkLength<A>> FusedIterator for IndexIter<A, N> {}
+impl<N: Unsigned> FusedIterator for IndexIter<N> {}

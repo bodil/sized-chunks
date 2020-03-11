@@ -59,7 +59,7 @@ pub struct RingBuffer<A, N = U64>
 where
     N: ChunkLength<A>,
 {
-    origin: RawIndex<A, N>,
+    origin: RawIndex<N>,
     length: usize,
     data: MaybeUninit<N::SizedType>,
 }
@@ -84,37 +84,37 @@ where
 
     /// Get the raw index for a logical index.
     #[inline]
-    fn raw(&self, index: usize) -> RawIndex<A, N> {
+    fn raw(&self, index: usize) -> RawIndex<N> {
         self.origin + index
     }
 
     #[inline]
-    unsafe fn ptr(&self, index: RawIndex<A, N>) -> *const A {
+    unsafe fn ptr(&self, index: RawIndex<N>) -> *const A {
         debug_assert!(index.to_usize() < Self::CAPACITY);
         (&self.data as *const _ as *const A).add(index.to_usize())
     }
 
     #[inline]
-    unsafe fn mut_ptr(&mut self, index: RawIndex<A, N>) -> *mut A {
+    unsafe fn mut_ptr(&mut self, index: RawIndex<N>) -> *mut A {
         debug_assert!(index.to_usize() < Self::CAPACITY);
         (&mut self.data as *mut _ as *mut A).add(index.to_usize())
     }
 
     /// Drop the value at a raw index.
     #[inline]
-    unsafe fn force_drop(&mut self, index: RawIndex<A, N>) {
+    unsafe fn force_drop(&mut self, index: RawIndex<N>) {
         std::ptr::drop_in_place(self.mut_ptr(index))
     }
 
     /// Copy the value at a raw index, discarding ownership of the copied value
     #[inline]
-    unsafe fn force_read(&self, index: RawIndex<A, N>) -> A {
+    unsafe fn force_read(&self, index: RawIndex<N>) -> A {
         std::ptr::read(self.ptr(index))
     }
 
     /// Write a value at a raw index without trying to drop what's already there
     #[inline]
-    unsafe fn force_write(&mut self, index: RawIndex<A, N>, value: A) {
+    unsafe fn force_write(&mut self, index: RawIndex<N>, value: A) {
         std::ptr::write(self.mut_ptr(index), value)
     }
 
@@ -122,16 +122,16 @@ where
     unsafe fn copy_from(
         &mut self,
         source: &mut Self,
-        from: RawIndex<A, N>,
-        to: RawIndex<A, N>,
+        from: RawIndex<N>,
+        to: RawIndex<N>,
         count: usize,
     ) {
         #[inline]
         unsafe fn force_copy_to<A, N: ChunkLength<A>>(
             source: &mut RingBuffer<A, N>,
-            from: RawIndex<A, N>,
+            from: RawIndex<N>,
             target: &mut RingBuffer<A, N>,
-            to: RawIndex<A, N>,
+            to: RawIndex<N>,
             count: usize,
         ) {
             if count > 0 {
@@ -157,7 +157,7 @@ where
     }
 
     /// Copy values from a slice.
-    unsafe fn copy_from_slice(&mut self, source: &[A], to: RawIndex<A, N>) {
+    unsafe fn copy_from_slice(&mut self, source: &[A], to: RawIndex<N>) {
         let count = source.len();
         debug_assert!(to.to_usize() + count <= Self::CAPACITY);
         if to.to_usize() + count > Self::CAPACITY {
@@ -181,7 +181,7 @@ where
 
     /// Get an iterator over the raw indices of the buffer from left to right.
     #[inline]
-    fn range(&self) -> IndexIter<A, N> {
+    fn range(&self) -> IndexIter<N> {
         IndexIter {
             remaining: self.len(),
             left_index: self.origin,

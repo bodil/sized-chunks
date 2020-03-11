@@ -14,8 +14,8 @@ where
     N: ChunkLength<A>,
 {
     pub(crate) buffer: &'a RingBuffer<A, N>,
-    pub(crate) left_index: RawIndex<A, N>,
-    pub(crate) right_index: RawIndex<A, N>,
+    pub(crate) left_index: RawIndex<N>,
+    pub(crate) right_index: RawIndex<N>,
     pub(crate) remaining: usize,
 }
 
@@ -65,8 +65,8 @@ where
     N: ChunkLength<A>,
 {
     pub(crate) buffer: &'a mut RingBuffer<A, N>,
-    pub(crate) left_index: RawIndex<A, N>,
-    pub(crate) right_index: RawIndex<A, N>,
+    pub(crate) left_index: RawIndex<N>,
+    pub(crate) right_index: RawIndex<N>,
     pub(crate) remaining: usize,
 }
 

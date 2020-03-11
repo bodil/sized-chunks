@@ -12,7 +12,7 @@ where
 {
     unsafe fn default_uninit(target: &mut MaybeUninit<Self>) {
         let ptr = target.as_mut_ptr();
-        let origin_ptr: *mut RawIndex<A, N> = &mut (*ptr).origin;
+        let origin_ptr: *mut RawIndex<N> = &mut (*ptr).origin;
         let length_ptr: *mut usize = &mut (*ptr).length;
         origin_ptr.write(0.into());
         length_ptr.write(0);
@@ -26,7 +26,7 @@ where
 {
     unsafe fn clone_uninit(&self, target: &mut MaybeUninit<Self>) {
         let ptr = target.as_mut_ptr();
-        let origin_ptr: *mut RawIndex<A, N> = &mut (*ptr).origin;
+        let origin_ptr: *mut RawIndex<N> = &mut (*ptr).origin;
         let length_ptr: *mut usize = &mut (*ptr).length;
         let data_ptr: *mut _ = &mut (*ptr).data;
         let data_ptr: *mut A = (*data_ptr).as_mut_ptr().cast();
