@@ -1,17 +1,5 @@
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-mod inline_array;
-mod ring_buffer;
-mod sized_chunk;
-mod sparse_chunk;
-
-pub(crate) fn action_count() -> usize {
-    std::env::var("ACTION_COUNT")
-        .ok()
-        .and_then(|s| s.parse().ok())
-        .unwrap_or(100)
-}
-
 pub(crate) struct DropTest<'a> {
     counter: &'a AtomicUsize,
 }
