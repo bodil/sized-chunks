@@ -372,8 +372,18 @@ where
         if index >= self.len() {
             None
         } else {
-            Some(unsafe { &*self.ptr(self.raw(index)) })
+            Some(unsafe { self.get_unchecked(index) })
         }
+    }
+
+    /// Get an unchecked reference to the value at the given index.
+    ///
+    /// # Safety
+    ///
+    /// You must ensure the index is not out of bounds.
+    #[must_use]
+    pub unsafe fn get_unchecked(&self, index: usize) -> &A {
+        &*self.ptr(self.raw(index))
     }
 
     /// Get a mutable reference to the value at a given index.
@@ -382,8 +392,18 @@ where
         if index >= self.len() {
             None
         } else {
-            Some(unsafe { &mut *self.mut_ptr(self.raw(index)) })
+            Some(unsafe { self.get_unchecked_mut(index) })
         }
+    }
+
+    /// Get an unchecked mutable reference to the value at the given index.
+    ///
+    /// # Safety
+    ///
+    /// You must ensure the index is not out of bounds.
+    #[must_use]
+    pub unsafe fn get_unchecked_mut(&mut self, index: usize) -> &mut A {
+        &mut *self.mut_ptr(self.raw(index))
     }
 
     /// Get a reference to the first value in the buffer.
@@ -647,6 +667,94 @@ where
         unsafe { self.force_write(self.raw(index), value) };
     }
 
+    /// Insert a new value into the buffer in sorted order.
+    ///
+    /// This assumes every element of the buffer is already in sorted order.
+    /// If not, the value will still be inserted but the ordering is not
+    /// guaranteed.
+    ///
+    /// Time: O(log n) to find the insert position, then O(n) for the number
+    /// of elements shifted.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # use std::iter::FromIterator;
+    /// # use sized_chunks::Chunk;
+    /// # use typenum::U64;
+    /// let mut chunk = Chunk::<i32, U64>::from_iter(0..5);
+    /// chunk.insert_ordered(3);
+    /// assert_eq!(&[0, 1, 2, 3, 3, 4], chunk.as_slice());
+    /// ```
+    pub fn insert_ordered(&mut self, value: A)
+    where
+        A: Ord,
+    {
+        if self.is_full() {
+            panic!("Chunk::insert: chunk is full");
+        }
+        match self.slice(..).binary_search(&value) {
+            Ok(index) => self.insert(index, value),
+            Err(index) => self.insert(index, value),
+        }
+    }
+
+    /// Insert multiple values at index `index`, shifting all the following values
+    /// to the right.
+    ///
+    /// Panics if the index is out of bounds or the chunk doesn't have room for
+    /// all the values.
+    ///
+    /// Time: O(m+n) where m is the number of elements inserted and n is the number
+    /// of elements following the insertion index. Calling `insert`
+    /// repeatedly would be O(m*n).
+    pub fn insert_from<Iterable, I>(&mut self, index: usize, iter: Iterable)
+    where
+        Iterable: IntoIterator<Item = A, IntoIter = I>,
+        I: ExactSizeIterator<Item = A>,
+    {
+        let iter = iter.into_iter();
+        let insert_size = iter.len();
+        if self.len() + insert_size > Self::CAPACITY {
+            panic!(
+                "Chunk::insert_from: chunk cannot fit {} elements",
+                insert_size
+            );
+        }
+        if index > self.len() {
+            panic!("Chunk::insert_from: index out of bounds");
+        }
+        if index == self.len() {
+            self.extend(iter);
+            return;
+        }
+        let right_count = self.len() - index;
+        // Check which side has fewer elements to shift.
+        if right_count < index {
+            // Shift to the right.
+            let mut i = self.raw(self.len() - 1);
+            let target = self.raw(index);
+            while i != target {
+                unsafe { self.force_write(i + insert_size, self.force_read(i)) };
+                i -= 1;
+            }
+            unsafe { self.force_write(target + insert_size, self.force_read(target)) };
+            self.length += insert_size;
+        } else {
+            // Shift to the left.
+            self.origin -= insert_size;
+            self.length += insert_size;
+            for i in self.range().take(index) {
+                unsafe { self.force_write(i, self.force_read(i + insert_size)) };
+            }
+        }
+        let mut index = self.raw(index);
+        for value in iter {
+            unsafe { self.force_write(index, value) };
+            index += 1;
+        }
+    }
+
     /// Remove the value at index `index`, shifting all the following values to
     /// the left.
     ///
@@ -765,16 +873,36 @@ impl<A: PartialEq, N: ChunkLength<A>> PartialEq for RingBuffer<A, N> {
     }
 }
 
-impl<A, N, Slice> PartialEq<Slice> for RingBuffer<A, N>
+impl<A, N, PrimSlice> PartialEq<PrimSlice> for RingBuffer<A, N>
 where
-    Slice: Borrow<[A]>,
+    PrimSlice: Borrow<[A]>,
     A: PartialEq,
     N: ChunkLength<A>,
 {
     #[inline]
     #[must_use]
-    fn eq(&self, other: &Slice) -> bool {
+    fn eq(&self, other: &PrimSlice) -> bool {
         let other = other.borrow();
+        self.len() == other.len() && self.iter().eq(other.iter())
+    }
+}
+
+impl<A, N> PartialEq<Slice<'_, A, N>> for RingBuffer<A, N>
+where
+    A: PartialEq,
+    N: ChunkLength<A>,
+{
+    fn eq(&self, other: &Slice<'_, A, N>) -> bool {
+        self.len() == other.len() && self.iter().eq(other.iter())
+    }
+}
+
+impl<A, N> PartialEq<SliceMut<'_, A, N>> for RingBuffer<A, N>
+where
+    A: PartialEq,
+    N: ChunkLength<A>,
+{
+    fn eq(&self, other: &SliceMut<'_, A, N>) -> bool {
         self.len() == other.len() && self.iter().eq(other.iter())
     }
 }
@@ -909,6 +1037,11 @@ impl<'a, A, N: ChunkLength<A>> IntoIterator for &'a mut RingBuffer<A, N> {
 #[cfg(test)]
 mod test {
     use super::*;
+
+    #[test]
+    fn validity_invariant() {
+        assert!(Some(RingBuffer::<Box<()>>::new()).is_some());
+    }
 
     #[test]
     fn is_full() {

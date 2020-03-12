@@ -43,6 +43,8 @@ where
     DrainFromBack(Construct<A>, usize),
     Set(usize, A),
     Insert(usize, A),
+    InsertFrom(Vec<A>, usize),
+    InsertOrdered(A),
     Remove(usize),
     Drain,
     Clear,
@@ -233,6 +235,27 @@ fuzz_target!(|input: (Construct<u32>, Vec<Action<u32>>)| {
                 } else {
                     chunk.insert(index, value);
                     guide.insert(index, value);
+                }
+            }
+            Action::InsertFrom(values, index) => {
+                if index > chunk.len() || chunk.len() + values.len() > capacity {
+                    assert_panic(|| chunk.insert_from(index, values));
+                } else {
+                    chunk.insert_from(index, values.clone());
+                    for value in values.into_iter().rev() {
+                        guide.insert(index, value);
+                    }
+                }
+            }
+            Action::InsertOrdered(value) => {
+                if chunk.is_full() {
+                    assert_panic(|| chunk.insert_ordered(value));
+                } else {
+                    chunk.insert_ordered(value);
+                    match guide.binary_search(&value) {
+                        Ok(index) => guide.insert(index, value),
+                        Err(index) => guide.insert(index, value),
+                    }
                 }
             }
             Action::Remove(index) => {

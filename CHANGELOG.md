@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) and this project
 adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### ADDED
+
+-   The `insert_from` and `insert_ordered` methods recently added to `Chunk` have now also been
+    added to `RingBuffer`.
+-   `RingBuffer`'s `Slice` and `SliceMut` now also have the three `binary_search` methods regular
+    slices have.
+-   `RingBuffer`, `Slice` and `SliceMut` now have unsafe `get_unchecked` and `get_unchecked_mut`
+    methods.
+-   `PartialEq` implementations allowing you to compare `RingBuffer`s, `Slice`s and `SliceMut`s
+    interchangeably have been added.
+
 ## [0.5.3] - 2020-03-11
 
 ### FIXED

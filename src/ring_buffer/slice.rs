@@ -40,12 +40,22 @@ impl<'a, A: 'a, N: ChunkLength<A> + 'a> Slice<'a, A, N> {
     /// Get a reference to the value at a given index.
     #[inline]
     #[must_use]
-    pub fn get(&self, index: usize) -> Option<&'a A> {
+    pub fn get(&self, index: usize) -> Option<&A> {
         if index >= self.len() {
             None
         } else {
-            self.buffer.get(self.range.start + index)
+            Some(unsafe { self.get_unchecked(index) })
         }
+    }
+
+    /// Get an unchecked reference to the value at the given index.
+    ///
+    /// # Safety
+    ///
+    /// You must ensure the index is not out of bounds.
+    #[must_use]
+    pub unsafe fn get_unchecked(&self, index: usize) -> &A {
+        self.buffer.get_unchecked(self.range.start + index)
     }
 
     /// Get a reference to the first value in the slice.
@@ -142,6 +152,55 @@ impl<'a, A: 'a, N: ChunkLength<A> + 'a> Slice<'a, A, N> {
     {
         self.iter().cloned().collect()
     }
+
+    /// Perform a binary search for the given value.
+    ///
+    /// This assumes the slice contains ordered data.
+    pub fn binary_search(&self, target: &A) -> Result<usize, usize>
+    where
+        A: Ord,
+    {
+        self.binary_search_by(|value| value.cmp(target))
+    }
+
+    /// Perform a binary search using the given comparator function.
+    ///
+    /// This assumes the slice contains ordered data.
+    pub fn binary_search_by<F>(&self, mut f: F) -> Result<usize, usize>
+    where
+        F: FnMut(&A) -> Ordering,
+    {
+        let s = self;
+        let mut size = s.len();
+        if size == 0 {
+            return Err(0);
+        }
+        let mut base = 0usize;
+        while size > 1 {
+            let half = size / 2;
+            let mid = base + half;
+            let cmp = f(unsafe { s.get_unchecked(mid) });
+            base = if cmp == Ordering::Greater { base } else { mid };
+            size -= half;
+        }
+        let cmp = f(unsafe { s.get_unchecked(base) });
+        if cmp == Ordering::Equal {
+            Ok(base)
+        } else {
+            Err(base + (cmp == Ordering::Less) as usize)
+        }
+    }
+
+    /// Perform a binary search with a key extraction function.
+    ///
+    /// This assumes the slice contains data ordered by the key.
+    pub fn binary_search_by_key<K, F>(&self, b: &K, mut f: F) -> Result<usize, usize>
+    where
+        F: FnMut(&A) -> K,
+        K: Ord,
+    {
+        self.binary_search_by(|k| f(k).cmp(b))
+    }
 }
 
 impl<'a, A: 'a, N: ChunkLength<A> + 'a> From<&'a RingBuffer<A, N>> for Slice<'a, A, N> {
@@ -183,6 +242,26 @@ impl<'a, A: PartialEq + 'a, N: ChunkLength<A> + 'a> PartialEq for Slice<'a, A, N
     #[inline]
     #[must_use]
     fn eq(&self, other: &Self) -> bool {
+        self.len() == other.len() && self.iter().eq(other.iter())
+    }
+}
+
+impl<'a, A: PartialEq + 'a, N: ChunkLength<A> + 'a> PartialEq<SliceMut<'a, A, N>>
+    for Slice<'a, A, N>
+{
+    #[inline]
+    #[must_use]
+    fn eq(&self, other: &SliceMut<'a, A, N>) -> bool {
+        self.len() == other.len() && self.iter().eq(other.iter())
+    }
+}
+
+impl<'a, A: PartialEq + 'a, N: ChunkLength<A> + 'a> PartialEq<RingBuffer<A, N>>
+    for Slice<'a, A, N>
+{
+    #[inline]
+    #[must_use]
+    fn eq(&self, other: &RingBuffer<A, N>) -> bool {
         self.len() == other.len() && self.iter().eq(other.iter())
     }
 }
@@ -280,27 +359,43 @@ impl<'a, A: 'a, N: ChunkLength<A> + 'a> SliceMut<'a, A, N> {
     /// Get a reference to the value at a given index.
     #[inline]
     #[must_use]
-    pub fn get(&self, index: usize) -> Option<&'a A> {
+    pub fn get(&self, index: usize) -> Option<&A> {
         if index >= self.len() {
             None
         } else {
-            self.buffer
-                .get(self.range.start + index)
-                .map(|r| unsafe { &*(r as *const _) })
+            Some(unsafe { self.get_unchecked(index) })
         }
+    }
+
+    /// Get an unchecked reference to the value at the given index.
+    ///
+    /// # Safety
+    ///
+    /// You must ensure the index is not out of bounds.
+    #[must_use]
+    pub unsafe fn get_unchecked(&self, index: usize) -> &A {
+        self.buffer.get_unchecked(self.range.start + index)
     }
 
     /// Get a mutable reference to the value at a given index.
     #[inline]
     #[must_use]
-    pub fn get_mut(&mut self, index: usize) -> Option<&'a mut A> {
+    pub fn get_mut(&mut self, index: usize) -> Option<&mut A> {
         if index >= self.len() {
             None
         } else {
-            self.buffer
-                .get_mut(self.range.start + index)
-                .map(|r| unsafe { &mut *(r as *mut _) })
+            Some(unsafe { self.get_unchecked_mut(index) })
         }
+    }
+
+    /// Get an unchecked mutable reference to the value at the given index.
+    ///
+    /// # Safety
+    ///
+    /// You must ensure the index is not out of bounds.
+    #[must_use]
+    pub unsafe fn get_unchecked_mut(&mut self, index: usize) -> &mut A {
+        self.buffer.get_unchecked_mut(self.range.start + index)
     }
 
     /// Get a reference to the first value in the slice.
@@ -445,6 +540,55 @@ impl<'a, A: 'a, N: ChunkLength<A> + 'a> SliceMut<'a, A, N> {
     {
         self.iter().cloned().collect()
     }
+
+    /// Perform a binary search for the given value.
+    ///
+    /// This assumes the slice contains ordered data.
+    pub fn binary_search(&self, target: &A) -> Result<usize, usize>
+    where
+        A: Ord,
+    {
+        self.binary_search_by(|value| value.cmp(target))
+    }
+
+    /// Perform a binary search using the given comparator function.
+    ///
+    /// This assumes the slice contains ordered data.
+    pub fn binary_search_by<F>(&self, mut f: F) -> Result<usize, usize>
+    where
+        F: FnMut(&A) -> Ordering,
+    {
+        let s = self;
+        let mut size = s.len();
+        if size == 0 {
+            return Err(0);
+        }
+        let mut base = 0usize;
+        while size > 1 {
+            let half = size / 2;
+            let mid = base + half;
+            let cmp = f(unsafe { s.get_unchecked(mid) });
+            base = if cmp == Ordering::Greater { base } else { mid };
+            size -= half;
+        }
+        let cmp = f(unsafe { s.get_unchecked(base) });
+        if cmp == Ordering::Equal {
+            Ok(base)
+        } else {
+            Err(base + (cmp == Ordering::Less) as usize)
+        }
+    }
+
+    /// Perform a binary search with a key extraction function.
+    ///
+    /// This assumes the slice contains data ordered by the key.
+    pub fn binary_search_by_key<K, F>(&self, b: &K, mut f: F) -> Result<usize, usize>
+    where
+        F: FnMut(&A) -> K,
+        K: Ord,
+    {
+        self.binary_search_by(|k| f(k).cmp(b))
+    }
 }
 
 impl<'a, A: 'a, N: ChunkLength<A> + 'a> From<&'a mut RingBuffer<A, N>> for SliceMut<'a, A, N> {
@@ -490,6 +634,26 @@ impl<'a, A: PartialEq + 'a, N: ChunkLength<A> + 'a> PartialEq for SliceMut<'a, A
     #[inline]
     #[must_use]
     fn eq(&self, other: &Self) -> bool {
+        self.len() == other.len() && self.iter().eq(other.iter())
+    }
+}
+
+impl<'a, A: PartialEq + 'a, N: ChunkLength<A> + 'a> PartialEq<Slice<'a, A, N>>
+    for SliceMut<'a, A, N>
+{
+    #[inline]
+    #[must_use]
+    fn eq(&self, other: &Slice<'a, A, N>) -> bool {
+        self.len() == other.len() && self.iter().eq(other.iter())
+    }
+}
+
+impl<'a, A: PartialEq + 'a, N: ChunkLength<A> + 'a> PartialEq<RingBuffer<A, N>>
+    for SliceMut<'a, A, N>
+{
+    #[inline]
+    #[must_use]
+    fn eq(&self, other: &RingBuffer<A, N>) -> bool {
         self.len() == other.len() && self.iter().eq(other.iter())
     }
 }
