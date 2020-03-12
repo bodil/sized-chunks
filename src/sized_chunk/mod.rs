@@ -247,7 +247,7 @@ where
     /// Test if the chunk is at capacity.
     #[inline]
     pub fn is_full(&self) -> bool {
-        self.left == 0 && self.right == N::USIZE
+        self.left == 0 && self.right == Self::CAPACITY
     }
 
     #[inline]
