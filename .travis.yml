@@ -36,11 +36,6 @@ matrix:
           install:
               - rustup component add clippy; true
           script: cargo clippy -- -D warnings
-        
-        - name: Miri
-          arch: amd64
-          rust: stable
-          script: ci/miri.sh
 
         - name: Coveralls
           arch: amd64
