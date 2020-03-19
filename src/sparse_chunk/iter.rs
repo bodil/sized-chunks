@@ -165,50 +165,81 @@ impl<'a, A, N: Bits + ChunkLength<A>> Iterator for OptionDrain<A, N> {
     }
 }
 
-#[cfg(all(test, not(miri)))]
+#[cfg(test)]
 mod test {
     use super::*;
-    use proptest::{collection::vec, num::usize, option::of, prop_assert, proptest};
+    use std::iter::FromIterator;
     use typenum::U64;
 
-    proptest! {
-        #[test]
-        fn iter(ref vec in vec(of(usize::ANY), 0..64)) {
-            let chunk: SparseChunk<_, U64> = vec.iter().cloned().collect();
-            let vec: Vec<usize> = vec.iter().cloned().filter(|v| v.is_some()).map(|v| v.unwrap()).collect();
-            prop_assert!(vec.iter().eq(chunk.iter()));
-        }
+    #[test]
+    fn iter() {
+        let vec: Vec<Option<usize>> =
+            Vec::from_iter((0..64).map(|i| if i % 2 == 0 { Some(i) } else { None }));
+        let chunk: SparseChunk<usize, U64> = vec.iter().cloned().collect();
+        let vec: Vec<usize> = vec
+            .iter()
+            .cloned()
+            .filter(|v| v.is_some())
+            .map(|v| v.unwrap())
+            .collect();
+        assert!(vec.iter().eq(chunk.iter()));
+    }
 
-        #[test]
-        fn iter_mut(ref vec in vec(of(usize::ANY), 0..64)) {
-            let mut chunk: SparseChunk<_, U64> = vec.iter().cloned().collect();
-            let mut vec: Vec<usize> = vec.iter().cloned().filter(|v| v.is_some()).map(|v| v.unwrap()).collect();
-            prop_assert!(vec.iter_mut().eq(chunk.iter_mut()));
-        }
+    #[test]
+    fn iter_mut() {
+        let vec: Vec<Option<usize>> =
+            Vec::from_iter((0..64).map(|i| if i % 2 == 0 { Some(i) } else { None }));
+        let mut chunk: SparseChunk<_, U64> = vec.iter().cloned().collect();
+        let mut vec: Vec<usize> = vec
+            .iter()
+            .cloned()
+            .filter(|v| v.is_some())
+            .map(|v| v.unwrap())
+            .collect();
+        assert!(vec.iter_mut().eq(chunk.iter_mut()));
+    }
 
-        #[test]
-        fn drain(ref vec in vec(of(usize::ANY), 0..64)) {
-            let chunk: SparseChunk<_, U64> = vec.iter().cloned().collect();
-            let vec: Vec<usize> = vec.iter().cloned().filter(|v| v.is_some()).map(|v| v.unwrap()).collect();
-            prop_assert!(vec.into_iter().eq(chunk.into_iter()));
-        }
+    #[test]
+    fn drain() {
+        let vec: Vec<Option<usize>> =
+            Vec::from_iter((0..64).map(|i| if i % 2 == 0 { Some(i) } else { None }));
+        let chunk: SparseChunk<_, U64> = vec.iter().cloned().collect();
+        let vec: Vec<usize> = vec
+            .iter()
+            .cloned()
+            .filter(|v| v.is_some())
+            .map(|v| v.unwrap())
+            .collect();
+        assert!(vec.into_iter().eq(chunk.into_iter()));
+    }
 
-        #[test]
-        fn option_iter(ref vec in vec(of(usize::ANY), 64)) {
-            let chunk: SparseChunk<_, U64> = vec.iter().cloned().collect();
-            prop_assert!(vec.iter().cloned().eq(chunk.option_iter().map(|v| v.cloned())));
-        }
+    #[test]
+    fn option_iter() {
+        let vec: Vec<Option<usize>> =
+            Vec::from_iter((0..64).map(|i| if i % 2 == 0 { Some(i) } else { None }));
+        let chunk: SparseChunk<_, U64> = vec.iter().cloned().collect();
+        assert!(vec
+            .iter()
+            .cloned()
+            .eq(chunk.option_iter().map(|v| v.cloned())));
+    }
 
-        #[test]
-        fn option_iter_mut(ref vec in vec(of(usize::ANY), 64)) {
-            let mut chunk: SparseChunk<_, U64> = vec.iter().cloned().collect();
-            prop_assert!(vec.iter().cloned().eq(chunk.option_iter_mut().map(|v| v.cloned())));
-        }
+    #[test]
+    fn option_iter_mut() {
+        let vec: Vec<Option<usize>> =
+            Vec::from_iter((0..64).map(|i| if i % 2 == 0 { Some(i) } else { None }));
+        let mut chunk: SparseChunk<_, U64> = vec.iter().cloned().collect();
+        assert!(vec
+            .iter()
+            .cloned()
+            .eq(chunk.option_iter_mut().map(|v| v.cloned())));
+    }
 
-        #[test]
-        fn option_drain(ref vec in vec(of(usize::ANY), 64)) {
-            let chunk: SparseChunk<_, U64> = vec.iter().cloned().collect();
-            prop_assert!(vec.iter().cloned().eq(chunk.option_drain()));
-        }
+    #[test]
+    fn option_drain() {
+        let vec: Vec<Option<usize>> =
+            Vec::from_iter((0..64).map(|i| if i % 2 == 0 { Some(i) } else { None }));
+        let chunk: SparseChunk<_, U64> = vec.iter().cloned().collect();
+        assert!(vec.iter().cloned().eq(chunk.option_drain()));
     }
 }

@@ -26,6 +26,4 @@ refpool = { version = "0.3", optional = true }
 arbitrary = { version = "0.4", optional = true }
 
 [dev-dependencies]
-proptest = "0.9.5"
-proptest-derive = "0.1.2"
-criterion = "0.3.0"
+criterion = "0.3"
