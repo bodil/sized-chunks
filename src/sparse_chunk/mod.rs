@@ -200,7 +200,7 @@ where
             return None;
         }
         if self.map.get(index) {
-            Some(&self.values()[index])
+            Some(unsafe { self.get_unchecked(index) })
         } else {
             None
         }
@@ -212,10 +212,30 @@ where
             return None;
         }
         if self.map.get(index) {
-            Some(&mut self.values_mut()[index])
+            Some(unsafe { self.get_unchecked_mut(index) })
         } else {
             None
         }
+    }
+
+    /// Get an unchecked reference to the value at a given index.
+    ///
+    /// # Safety
+    ///
+    /// Uninhabited indices contain uninitialised data, so make sure you validate
+    /// the index before using this method.
+    pub unsafe fn get_unchecked(&self, index: usize) -> &A {
+        self.values().get_unchecked(index)
+    }
+
+    /// Get an unchecked mutable reference to the value at a given index.
+    ///
+    /// # Safety
+    ///
+    /// Uninhabited indices contain uninitialised data, so make sure you validate
+    /// the index before using this method.
+    pub unsafe fn get_unchecked_mut(&mut self, index: usize) -> &mut A {
+        self.values_mut().get_unchecked_mut(index)
     }
 
     /// Make an iterator over the indices which contain values.

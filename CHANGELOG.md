@@ -13,8 +13,8 @@ adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
     added to `RingBuffer`.
 -   `RingBuffer`'s `Slice` and `SliceMut` now also have the three `binary_search` methods regular
     slices have.
--   `RingBuffer`, `Slice` and `SliceMut` now have unsafe `get_unchecked` and `get_unchecked_mut`
-    methods.
+-   `SparseChunk`, `RingBuffer`, `Slice` and `SliceMut` now have unsafe `get_unchecked` and
+    `get_unchecked_mut` methods.
 -   `PartialEq` implementations allowing you to compare `RingBuffer`s, `Slice`s and `SliceMut`s
     interchangeably have been added.
 
