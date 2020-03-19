@@ -320,12 +320,7 @@ where
     #[inline]
     #[must_use]
     pub fn iter_mut(&mut self) -> IterMut<'_, A, N> {
-        IterMut {
-            left_index: self.origin,
-            right_index: self.origin + self.len(),
-            remaining: self.len(),
-            buffer: self,
-        }
+        IterMut::new(self)
     }
 
     #[must_use]

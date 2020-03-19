@@ -451,14 +451,11 @@ impl<'a, A: 'a, N: ChunkLength<A> + 'a> SliceMut<'a, A, N> {
     #[inline]
     #[must_use]
     pub fn iter_mut(&mut self) -> IterMut<'_, A, N> {
-        let origin = self.buffer.origin;
-        let len = self.len();
-        IterMut {
-            buffer: self.buffer,
-            left_index: origin + self.range.start,
-            right_index: origin + self.range.start + len,
-            remaining: len,
-        }
+        IterMut::new_slice(
+            self.buffer,
+            self.buffer.origin + self.range.start,
+            self.len(),
+        )
     }
 
     /// Create a subslice of this slice.

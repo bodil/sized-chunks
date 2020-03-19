@@ -3,6 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 use std::iter::FusedIterator;
+use std::marker::PhantomData;
 
 use crate::types::ChunkLength;
 
@@ -64,15 +65,45 @@ pub struct IterMut<'a, A, N>
 where
     N: ChunkLength<A>,
 {
-    pub(crate) buffer: &'a mut RingBuffer<A, N>,
-    pub(crate) left_index: RawIndex<N>,
-    pub(crate) right_index: RawIndex<N>,
-    pub(crate) remaining: usize,
+    data: *mut A,
+    left_index: RawIndex<N>,
+    right_index: RawIndex<N>,
+    remaining: usize,
+    phantom: PhantomData<&'a ()>,
+}
+
+impl<'a, A, N> IterMut<'a, A, N>
+where
+    N: ChunkLength<A>,
+    A: 'a,
+{
+    pub(crate) fn new(buffer: &mut RingBuffer<A, N>) -> Self {
+        Self::new_slice(buffer, buffer.origin, buffer.len())
+    }
+
+    pub(crate) fn new_slice(
+        buffer: &mut RingBuffer<A, N>,
+        origin: RawIndex<N>,
+        len: usize,
+    ) -> Self {
+        Self {
+            left_index: origin,
+            right_index: origin + len,
+            remaining: len,
+            phantom: PhantomData,
+            data: buffer.data.as_mut_ptr().cast(),
+        }
+    }
+
+    unsafe fn mut_ptr(&mut self, index: RawIndex<N>) -> *mut A {
+        self.data.add(index.to_usize())
+    }
 }
 
 impl<'a, A, N> Iterator for IterMut<'a, A, N>
 where
     N: ChunkLength<A>,
+    A: 'a,
 {
     type Item = &'a mut A;
 
@@ -81,7 +112,8 @@ where
             None
         } else {
             self.remaining -= 1;
-            Some(unsafe { &mut *self.buffer.mut_ptr(self.left_index.inc()) })
+            let index = self.left_index.inc();
+            Some(unsafe { &mut *self.mut_ptr(index) })
         }
     }
 
@@ -95,20 +127,32 @@ where
 impl<'a, A, N> DoubleEndedIterator for IterMut<'a, A, N>
 where
     N: ChunkLength<A>,
+    A: 'a,
 {
     fn next_back(&mut self) -> Option<Self::Item> {
         if self.remaining == 0 {
             None
         } else {
             self.remaining -= 1;
-            Some(unsafe { &mut *self.buffer.mut_ptr(self.right_index.dec()) })
+            let index = self.right_index.dec();
+            Some(unsafe { &mut *self.mut_ptr(index) })
         }
     }
 }
 
-impl<'a, A, N> ExactSizeIterator for IterMut<'a, A, N> where N: ChunkLength<A> {}
+impl<'a, A, N> ExactSizeIterator for IterMut<'a, A, N>
+where
+    N: ChunkLength<A>,
+    A: 'a,
+{
+}
 
-impl<'a, A, N> FusedIterator for IterMut<'a, A, N> where N: ChunkLength<A> {}
+impl<'a, A, N> FusedIterator for IterMut<'a, A, N>
+where
+    N: ChunkLength<A>,
+    A: 'a,
+{
+}
 
 /// A draining iterator over a `RingBuffer`.
 pub struct Drain<'a, A, N: ChunkLength<A>> {
