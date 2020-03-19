@@ -165,12 +165,6 @@ impl<A, T> InlineArray<A, T> {
         self_
     }
 
-    #[inline]
-    #[must_use]
-    fn get_unchecked(&self, index: usize) -> &A {
-        unsafe { &*self.data().add(index) }
-    }
-
     /// Push an item to the back of the array.
     ///
     /// Panics if the capacity of the array is exceeded.
@@ -267,16 +261,16 @@ impl<A, T> InlineArray<A, T> {
     }
 
     #[inline]
-    fn drop_contents(&mut self) {
-        unsafe { ptr::drop_in_place::<[A]>(&mut **self) }
+    unsafe fn drop_contents(&mut self) {
+        ptr::drop_in_place::<[A]>(&mut **self)
     }
 
     /// Discard the contents of the array.
     ///
     /// Time: O(n)
     pub fn clear(&mut self) {
-        self.drop_contents();
         unsafe {
+        self.drop_contents();
             *self.len_mut() = 0;
         }
     }
@@ -289,7 +283,7 @@ impl<A, T> InlineArray<A, T> {
 
 impl<A, T> Drop for InlineArray<A, T> {
     fn drop(&mut self) {
-        self.drop_contents()
+        unsafe { self.drop_contents() }
     }
 }
 
