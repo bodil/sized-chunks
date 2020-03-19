@@ -165,7 +165,7 @@ impl<'a, A, N: Bits + ChunkLength<A>> Iterator for OptionDrain<A, N> {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(miri)))]
 mod test {
     use super::*;
     use proptest::{collection::vec, num::usize, option::of, prop_assert, proptest};
