@@ -8,6 +8,7 @@ use std::marker::PhantomData;
 use crate::types::ChunkLength;
 
 use super::{index::RawIndex, RingBuffer};
+use array_ops::HasLength;
 
 /// A reference iterator over a `RingBuffer`.
 pub struct Iter<'a, A, N>

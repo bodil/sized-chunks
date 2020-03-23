@@ -270,7 +270,7 @@ impl<A, T> InlineArray<A, T> {
     /// Time: O(n)
     pub fn clear(&mut self) {
         unsafe {
-        self.drop_contents();
+            self.drop_contents();
             *self.len_mut() = 0;
         }
     }

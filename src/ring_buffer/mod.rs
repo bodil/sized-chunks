@@ -17,6 +17,8 @@ use std::ops::{Index, IndexMut};
 
 use typenum::U64;
 
+pub use array_ops::{Array, ArrayMut, HasLength};
+
 use crate::types::ChunkLength;
 
 mod index;
@@ -49,8 +51,12 @@ mod refpool;
 /// The `RingBuffer` offers its own [`Slice`][Slice] and [`SliceMut`][SliceMut]
 /// types to compensate for the loss of being able to take a slice, but they're
 /// somewhat less efficient, so the general rule should be that you shouldn't
-/// choose a `RingBuffer` if you really need to take slices - but if you don't,
+/// choose a `RingBuffer` if you rely heavily on slices - but if you don't,
 /// it's probably a marginally better choice overall than [`Chunk`][Chunk].
+///
+/// # Feature Flag
+///
+/// To use this data structure, you need to enable the `ringbuffer` feature.
 ///
 /// [Chunk]: ../sized_chunk/struct.Chunk.html
 /// [Slice]: struct.Slice.html
@@ -71,6 +77,48 @@ impl<A, N: ChunkLength<A>> Drop for RingBuffer<A, N> {
             for i in self.range() {
                 unsafe { self.force_drop(i) }
             }
+        }
+    }
+}
+
+impl<A, N> HasLength for RingBuffer<A, N>
+where
+    N: ChunkLength<A>,
+{
+    /// Get the length of the ring buffer.
+    #[inline]
+    #[must_use]
+    fn len(&self) -> usize {
+        self.length
+    }
+}
+
+impl<A, N> Array for RingBuffer<A, N>
+where
+    N: ChunkLength<A>,
+{
+    /// Get a reference to the value at a given index.
+    #[must_use]
+    fn get(&self, index: usize) -> Option<&A> {
+        if index >= self.len() {
+            None
+        } else {
+            Some(unsafe { self.get_unchecked(index) })
+        }
+    }
+}
+
+impl<A, N> ArrayMut for RingBuffer<A, N>
+where
+    N: ChunkLength<A>,
+{
+    /// Get a mutable reference to the value at a given index.
+    #[must_use]
+    fn get_mut(&mut self, index: usize) -> Option<&mut A> {
+        if index >= self.len() {
+            None
+        } else {
+            Some(unsafe { self.get_unchecked_mut(index) })
         }
     }
 }
@@ -281,20 +329,6 @@ where
         buffer
     }
 
-    /// Get the length of the ring buffer.
-    #[inline]
-    #[must_use]
-    pub fn len(&self) -> usize {
-        self.length
-    }
-
-    /// Test if the ring buffer is empty.
-    #[inline]
-    #[must_use]
-    pub fn is_empty(&self) -> bool {
-        self.len() == 0
-    }
-
     /// Test if the ring buffer is full.
     #[inline]
     #[must_use]
@@ -361,16 +395,6 @@ where
         }
     }
 
-    /// Get a reference to the value at a given index.
-    #[must_use]
-    pub fn get(&self, index: usize) -> Option<&A> {
-        if index >= self.len() {
-            None
-        } else {
-            Some(unsafe { self.get_unchecked(index) })
-        }
-    }
-
     /// Get an unchecked reference to the value at the given index.
     ///
     /// # Safety
@@ -381,16 +405,6 @@ where
         &*self.ptr(self.raw(index))
     }
 
-    /// Get a mutable reference to the value at a given index.
-    #[must_use]
-    pub fn get_mut(&mut self, index: usize) -> Option<&mut A> {
-        if index >= self.len() {
-            None
-        } else {
-            Some(unsafe { self.get_unchecked_mut(index) })
-        }
-    }
-
     /// Get an unchecked mutable reference to the value at the given index.
     ///
     /// # Safety
@@ -399,42 +413,6 @@ where
     #[must_use]
     pub unsafe fn get_unchecked_mut(&mut self, index: usize) -> &mut A {
         &mut *self.mut_ptr(self.raw(index))
-    }
-
-    /// Get a reference to the first value in the buffer.
-    #[inline]
-    #[must_use]
-    pub fn first(&self) -> Option<&A> {
-        self.get(0)
-    }
-
-    /// Get a mutable reference to the first value in the buffer.
-    #[inline]
-    #[must_use]
-    pub fn first_mut(&mut self) -> Option<&mut A> {
-        self.get_mut(0)
-    }
-
-    /// Get a reference to the last value in the buffer.
-    #[inline]
-    #[must_use]
-    pub fn last(&self) -> Option<&A> {
-        if self.is_empty() {
-            None
-        } else {
-            self.get(self.len() - 1)
-        }
-    }
-
-    /// Get a mutable reference to the last value in the buffer.
-    #[inline]
-    #[must_use]
-    pub fn last_mut(&mut self) -> Option<&mut A> {
-        if self.is_empty() {
-            None
-        } else {
-            self.get_mut(self.len() - 1)
-        }
     }
 
     /// Push a value to the back of the buffer.
@@ -609,15 +587,6 @@ where
         unsafe { self.copy_from(other, source_index, self.origin, count) };
         other.length -= count;
         self.length += count;
-    }
-
-    /// Update the value at index `index`, returning the old value.
-    ///
-    /// Panics if `index` is out of bounds.
-    ///
-    /// Time: O(1)
-    pub fn set(&mut self, index: usize, value: A) -> A {
-        std::mem::replace(&mut self[index], value)
     }
 
     /// Insert a new value at index `index`, shifting all the following values

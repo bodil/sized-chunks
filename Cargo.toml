@@ -19,9 +19,13 @@ all-features = true
 name = "sized_chunk"
 harness = false
 
+[features]
+ringbuffer = ["array-ops"]
+
 [dependencies]
 typenum = "1.11.2"
 bitmaps = "2.0.0"
+array-ops = { version = "0.1", optional = true }
 refpool = { version = "0.3", optional = true }
 arbitrary = { version = "0.4", optional = true }
 

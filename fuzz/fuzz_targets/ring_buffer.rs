@@ -4,6 +4,7 @@ use std::fmt::Debug;
 use std::iter::FromIterator;
 
 use arbitrary::Arbitrary;
+use array_ops::{ArrayMut, HasLength};
 use libfuzzer_sys::fuzz_target;
 
 use sized_chunks::RingBuffer;
@@ -223,7 +224,7 @@ fuzz_target!(|input: (Construct<u32>, Vec<Action<u32>>)| {
             }
             Action::Set(index, value) => {
                 if index >= chunk.len() {
-                    assert_panic(|| chunk.set(index, value));
+                    assert_eq!(None, chunk.set(index, value));
                 } else {
                     chunk.set(index, value);
                     guide[index] = value;

@@ -7,6 +7,17 @@ adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### CHANGED
+
+-   `RingBuffer` and its accompanying slice types `Slice` and `SliceMut` now implement `Array` and
+    `ArrayMut` from [`array-ops`](http://docs.rs/array-ops), giving them most of the methods that
+    would be available on primitive slice types and cutting down on code duplication in the
+    implementation, but at the price of having to pull `Array` et al into scope when you need them.
+    Because this means adding a dependency to `array-ops`, `RingBuffer` has now been moved behind
+    the `ringbuffer` feature flag. `Chunk` and `InlineArray` don't and won't implement `Array`,
+    because they are both able to implement `Deref<[A]>`, which provides the same functionality more
+    efficiently.
+
 ### ADDED
 
 -   The `insert_from` and `insert_ordered` methods recently added to `Chunk` have now also been
