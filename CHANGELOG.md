@@ -18,6 +18,13 @@ adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 -   `PartialEq` implementations allowing you to compare `RingBuffer`s, `Slice`s and `SliceMut`s
     interchangeably have been added.
 
+### FIXED
+
+-   Fixed an aliasing issue in `RingBuffer`'s mutable iterator, as uncovered by Miri. Behind the
+    scenes, the full non-fuzzing unit test suite is now able to run on Miri without crashing it
+    (after migrating the last Proptest tests away from the test suite into the fuzz targets), and
+    this has been included in its CI build. (#6)
+
 ## [0.5.3] - 2020-03-11
 
 ### FIXED
