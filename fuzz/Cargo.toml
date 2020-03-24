@@ -15,7 +15,7 @@ arbitrary = { version = "0.4", features = ["derive"] }
 
 [dependencies.sized-chunks]
 path = ".."
-features = ["arbitrary"]
+features = ["arbitrary", "ringbuffer"]
 
 # Prevent this from interfering with workspaces
 [workspace]
