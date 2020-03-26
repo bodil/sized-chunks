@@ -79,9 +79,10 @@
 //!
 //! | Feature | Description |
 //! | ------- | ----------- |
-//! | `arbitrary` | Provides [`Arbitrary`][Arbitrary] implementations from the [`arbitrary`][arbitrary_crate] crate. |
+//! | `arbitrary` | Provides [`Arbitrary`][Arbitrary] implementations from the [`arbitrary`][arbitrary_crate] crate. Requires the `std` flag. |
 //! | `refpool` | Provides [`PoolDefault`][PoolDefault] and [`PoolClone`][PoolClone] implemetations from the [`refpool`][refpool] crate. |
 //! | `ringbuffer` | Enables the [`RingBuffer`][RingBuffer] data structure. |
+//! | `std` | Without this flag (enabled by default), the crate will be `no_std`, and absent traits relating to `std::collections` and `std::io`. |
 //!
 //! [immutable.rs]: https://immutable.rs/
 //! [typenum]: https://docs.rs/typenum/
@@ -100,6 +101,7 @@
 #![deny(nonstandard_style)]
 #![warn(unreachable_pub, missing_docs)]
 #![cfg_attr(test, deny(warnings))]
+#![cfg_attr(not(any(feature = "std", test)), no_std)]
 
 pub mod inline_array;
 pub mod sized_chunk;

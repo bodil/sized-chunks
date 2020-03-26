@@ -7,18 +7,20 @@
 //! See [`Chunk`](struct.Chunk.html)
 
 use crate::inline_array::InlineArray;
-use std::borrow::{Borrow, BorrowMut};
-use std::cmp::Ordering;
-use std::fmt::{Debug, Error, Formatter};
-use std::hash::{Hash, Hasher};
-use std::io;
-use std::iter::FromIterator;
-use std::mem::{replace, MaybeUninit};
-use std::ops::{Deref, DerefMut, Index, IndexMut};
-use std::ptr;
-use std::slice::{
+use core::borrow::{Borrow, BorrowMut};
+use core::cmp::Ordering;
+use core::fmt::{Debug, Error, Formatter};
+use core::hash::{Hash, Hasher};
+use core::iter::FromIterator;
+use core::mem::{replace, MaybeUninit};
+use core::ops::{Deref, DerefMut, Index, IndexMut};
+use core::ptr;
+use core::slice::{
     from_raw_parts, from_raw_parts_mut, Iter as SliceIter, IterMut as SliceIterMut, SliceIndex,
 };
+
+#[cfg(feature = "std")]
+use std::io;
 
 use typenum::U64;
 
@@ -769,6 +771,7 @@ where
     }
 }
 
+#[cfg(feature = "std")]
 impl<N> io::Write for Chunk<u8, N>
 where
     N: ChunkLength<u8>,
@@ -784,6 +787,7 @@ where
     }
 }
 
+#[cfg(feature = "std")]
 impl<N: ChunkLength<u8>> std::io::Read for Chunk<u8, N> {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
         let read_size = buf.len().min(self.len());

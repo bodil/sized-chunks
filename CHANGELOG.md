@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) and this project
 adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### ADDED
+
+-   The crate now has a `std` feature flag, which is on by default, and will make the crate `no_std`
+    if disabled.
+
+### FIXED
+
+-   Fixed a compilation error if you had the `arbitrary` feature flag enabled without the
+    `ringbuffer` flag.
+
 ## [0.6.0] - 2020-03-24
 
 ### CHANGED

@@ -2,9 +2,9 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use std::iter::FusedIterator;
-use std::marker::PhantomData;
-use std::ops::{Add, AddAssign, Sub, SubAssign};
+use core::iter::FusedIterator;
+use core::marker::PhantomData;
+use core::ops::{Add, AddAssign, Sub, SubAssign};
 
 use typenum::Unsigned;
 

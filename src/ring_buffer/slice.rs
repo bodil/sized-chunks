@@ -2,15 +2,15 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use std::borrow::Borrow;
-use std::cmp::Ordering;
-use std::fmt::Debug;
-use std::fmt::Error;
-use std::fmt::Formatter;
-use std::hash::Hash;
-use std::hash::Hasher;
-use std::ops::IndexMut;
-use std::ops::{Bound, Index, Range, RangeBounds};
+use core::borrow::Borrow;
+use core::cmp::Ordering;
+use core::fmt::Debug;
+use core::fmt::Error;
+use core::fmt::Formatter;
+use core::hash::Hash;
+use core::hash::Hasher;
+use core::ops::IndexMut;
+use core::ops::{Bound, Index, Range, RangeBounds};
 
 use super::{Iter, IterMut, RingBuffer};
 use crate::types::ChunkLength;

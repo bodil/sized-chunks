@@ -1,4 +1,4 @@
-use std::iter::FusedIterator;
+use core::iter::FusedIterator;
 
 use super::Chunk;
 use crate::types::ChunkLength;

@@ -3,7 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 use bitmaps::Bits;
-use std::iter;
+use core::iter;
 
 use ::arbitrary::{size_hint, Arbitrary, Result, Unstructured};
 

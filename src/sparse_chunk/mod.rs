@@ -6,14 +6,16 @@
 //!
 //! See [`SparseChunk`](struct.SparseChunk.html)
 
+use core::fmt::{Debug, Error, Formatter};
+use core::iter::FromIterator;
+use core::mem::{self, MaybeUninit};
+use core::ops::Index;
+use core::ops::IndexMut;
+use core::ptr;
+use core::slice::{from_raw_parts, from_raw_parts_mut};
+
+#[cfg(feature = "std")]
 use std::collections::{BTreeMap, HashMap};
-use std::fmt::{Debug, Error, Formatter};
-use std::iter::FromIterator;
-use std::mem::{self, MaybeUninit};
-use std::ops::Index;
-use std::ops::IndexMut;
-use std::ptr;
-use std::slice::{from_raw_parts, from_raw_parts_mut};
 
 use typenum::U64;
 
@@ -375,6 +377,7 @@ where
     }
 }
 
+#[cfg(feature = "std")]
 impl<A, N> PartialEq<BTreeMap<usize, A>> for SparseChunk<A, N>
 where
     A: PartialEq,
@@ -393,6 +396,7 @@ where
     }
 }
 
+#[cfg(feature = "std")]
 impl<A, N> PartialEq<HashMap<usize, A>> for SparseChunk<A, N>
 where
     A: PartialEq,

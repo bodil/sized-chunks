@@ -6,16 +6,16 @@
 //!
 //! See [`InlineArray`](struct.InlineArray.html)
 
-use std::borrow::{Borrow, BorrowMut};
-use std::cmp::Ordering;
-use std::fmt::{Debug, Error, Formatter};
-use std::hash::{Hash, Hasher};
-use std::iter::FromIterator;
-use std::marker::PhantomData;
-use std::mem::{self, MaybeUninit};
-use std::ops::{Deref, DerefMut};
-use std::ptr;
-use std::slice::{from_raw_parts, from_raw_parts_mut, Iter as SliceIter, IterMut as SliceIterMut};
+use core::borrow::{Borrow, BorrowMut};
+use core::cmp::Ordering;
+use core::fmt::{Debug, Error, Formatter};
+use core::hash::{Hash, Hasher};
+use core::iter::FromIterator;
+use core::marker::PhantomData;
+use core::mem::{self, MaybeUninit};
+use core::ops::{Deref, DerefMut};
+use core::ptr;
+use core::slice::{from_raw_parts, from_raw_parts_mut, Iter as SliceIter, IterMut as SliceIterMut};
 
 mod iter;
 pub use self::iter::{Drain, Iter};

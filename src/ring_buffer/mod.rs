@@ -6,14 +6,14 @@
 //!
 //! See [`RingBuffer`](struct.RingBuffer.html)
 
-use std::borrow::Borrow;
-use std::cmp::Ordering;
-use std::fmt::{Debug, Error, Formatter};
-use std::hash::{Hash, Hasher};
-use std::iter::FromIterator;
-use std::mem::MaybeUninit;
-use std::ops::{Bound, Range, RangeBounds};
-use std::ops::{Index, IndexMut};
+use core::borrow::Borrow;
+use core::cmp::Ordering;
+use core::fmt::{Debug, Error, Formatter};
+use core::hash::{Hash, Hasher};
+use core::iter::FromIterator;
+use core::mem::MaybeUninit;
+use core::ops::{Bound, Range, RangeBounds};
+use core::ops::{Index, IndexMut};
 
 use typenum::U64;
 
@@ -73,7 +73,7 @@ where
 impl<A, N: ChunkLength<A>> Drop for RingBuffer<A, N> {
     #[inline]
     fn drop(&mut self) {
-        if std::mem::needs_drop::<A>() {
+        if core::mem::needs_drop::<A>() {
             for i in self.range() {
                 unsafe { self.force_drop(i) }
             }
@@ -151,19 +151,19 @@ where
     /// Drop the value at a raw index.
     #[inline]
     unsafe fn force_drop(&mut self, index: RawIndex<N>) {
-        std::ptr::drop_in_place(self.mut_ptr(index))
+        core::ptr::drop_in_place(self.mut_ptr(index))
     }
 
     /// Copy the value at a raw index, discarding ownership of the copied value
     #[inline]
     unsafe fn force_read(&self, index: RawIndex<N>) -> A {
-        std::ptr::read(self.ptr(index))
+        core::ptr::read(self.ptr(index))
     }
 
     /// Write a value at a raw index without trying to drop what's already there
     #[inline]
     unsafe fn force_write(&mut self, index: RawIndex<N>, value: A) {
-        std::ptr::write(self.mut_ptr(index), value)
+        core::ptr::write(self.mut_ptr(index), value)
     }
 
     /// Copy a range of raw indices from another buffer.
@@ -185,7 +185,7 @@ where
             if count > 0 {
                 debug_assert!(from.to_usize() + count <= RingBuffer::<A, N>::CAPACITY);
                 debug_assert!(to.to_usize() + count <= RingBuffer::<A, N>::CAPACITY);
-                std::ptr::copy_nonoverlapping(source.mut_ptr(from), target.mut_ptr(to), count)
+                core::ptr::copy_nonoverlapping(source.mut_ptr(from), target.mut_ptr(to), count)
             }
         }
 
@@ -205,6 +205,7 @@ where
     }
 
     /// Copy values from a slice.
+    #[allow(dead_code)]
     unsafe fn copy_from_slice(&mut self, source: &[A], to: RawIndex<N>) {
         let count = source.len();
         debug_assert!(to.to_usize() + count <= Self::CAPACITY);
@@ -212,18 +213,18 @@ where
             let first_length = Self::CAPACITY - to.to_usize();
             let first_slice = &source[..first_length];
             let last_slice = &source[first_length..];
-            std::ptr::copy_nonoverlapping(
+            core::ptr::copy_nonoverlapping(
                 first_slice.as_ptr(),
                 self.mut_ptr(to),
                 first_slice.len(),
             );
-            std::ptr::copy_nonoverlapping(
+            core::ptr::copy_nonoverlapping(
                 last_slice.as_ptr(),
                 self.mut_ptr(0.into()),
                 last_slice.len(),
             );
         } else {
-            std::ptr::copy_nonoverlapping(source.as_ptr(), self.mut_ptr(to), count)
+            core::ptr::copy_nonoverlapping(source.as_ptr(), self.mut_ptr(to), count)
         }
     }
 
@@ -923,6 +924,7 @@ impl<A: Hash, N: ChunkLength<A>> Hash for RingBuffer<A, N> {
     }
 }
 
+#[cfg(feature = "std")]
 impl<N: ChunkLength<u8>> std::io::Write for RingBuffer<u8, N> {
     fn write(&mut self, mut buf: &[u8]) -> std::io::Result<usize> {
         let max_new = Self::CAPACITY - self.len();
@@ -940,6 +942,7 @@ impl<N: ChunkLength<u8>> std::io::Write for RingBuffer<u8, N> {
     }
 }
 
+#[cfg(feature = "std")]
 impl<N: ChunkLength<u8>> std::io::Read for RingBuffer<u8, N> {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
         let read_size = buf.len().min(self.len());
@@ -1054,6 +1057,7 @@ mod test {
         assert_eq!(half, should);
     }
 
+    #[cfg(feature = "std")]
     #[test]
     fn io_write() {
         use std::io::Write;
@@ -1063,6 +1067,7 @@ mod test {
         assert_eq!(buffer, (0..64).collect::<Vec<u8>>());
     }
 
+    #[cfg(feature = "std")]
     #[test]
     fn io_read() {
         use std::io::Read;

@@ -20,6 +20,8 @@ name = "sized_chunk"
 harness = false
 
 [features]
+default = ["std"]
+std = []
 ringbuffer = ["array-ops"]
 
 [dependencies]

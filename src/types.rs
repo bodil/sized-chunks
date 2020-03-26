@@ -4,7 +4,7 @@
 
 //! Helper types for chunks.
 
-use std::marker::PhantomData;
+use core::marker::PhantomData;
 
 use typenum::*;
 
