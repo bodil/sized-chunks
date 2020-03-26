@@ -7,7 +7,10 @@ use std::iter;
 
 use ::arbitrary::{size_hint, Arbitrary, Result, Unstructured};
 
-use crate::{types::ChunkLength, Chunk, InlineArray, RingBuffer, SparseChunk};
+use crate::{types::ChunkLength, Chunk, InlineArray, SparseChunk};
+
+#[cfg(feature = "ringbuffer")]
+use crate::RingBuffer;
 
 fn empty<T: 'static>() -> Box<dyn Iterator<Item = T>> {
     Box::new(iter::empty())
@@ -68,6 +71,7 @@ where
     }
 }
 
+#[cfg(feature = "ringbuffer")]
 impl<A, N> Arbitrary for RingBuffer<A, N>
 where
     A: Arbitrary,
