@@ -87,6 +87,7 @@ jobs:
                   args: --all-features
 
     miri:
+        name: Miri
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v2
