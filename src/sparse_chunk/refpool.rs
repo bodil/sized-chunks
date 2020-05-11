@@ -50,7 +50,7 @@ mod test {
             chunk.insert(10, 37);
             chunk.insert(31, 337);
         }
-        let ref2 = ref1.cloned(&pool);
+        let ref2 = PoolRef::cloned(&pool, &ref1);
         assert_eq!(ref1, ref2);
         assert!(!PoolRef::ptr_eq(&ref1, &ref2));
     }

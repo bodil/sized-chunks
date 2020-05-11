@@ -53,7 +53,7 @@ mod test {
             chunk.push_back(2);
             chunk.push_back(3);
         }
-        let ref2 = ref1.cloned(&pool);
+        let ref2 = PoolRef::cloned(&pool, &ref1);
         let ref3 = PoolRef::clone_from(&pool, &Chunk::from_iter(1..=3));
         assert_eq!(Chunk::<usize>::from_iter(1..=3), *ref1);
         assert_eq!(Chunk::<usize>::from_iter(1..=3), *ref2);
