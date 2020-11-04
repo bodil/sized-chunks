@@ -4,6 +4,7 @@ use super::SparseChunk;
 use crate::types::ChunkLength;
 
 /// An iterator over references to the elements of a `SparseChunk`.
+#[derive(Debug, Clone)]
 pub struct Iter<'a, A, N: Bits + ChunkLength<A>> {
     pub(crate) indices: BitmapIter<'a, N>,
     pub(crate) chunk: &'a SparseChunk<A, N>,

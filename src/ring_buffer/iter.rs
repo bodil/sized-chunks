@@ -11,6 +11,7 @@ use super::{index::RawIndex, RingBuffer};
 use array_ops::HasLength;
 
 /// A reference iterator over a `RingBuffer`.
+#[derive(Clone)]
 pub struct Iter<'a, A, N>
 where
     N: ChunkLength<A>,
