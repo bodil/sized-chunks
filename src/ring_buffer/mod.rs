@@ -253,6 +253,7 @@ where
     #[inline]
     #[must_use]
     pub fn unit(value: A) -> Self {
+        assert!(Self::CAPACITY >= 1);
         let mut buffer = Self {
             origin: 0.into(),
             length: 1,
@@ -268,6 +269,7 @@ where
     #[inline]
     #[must_use]
     pub fn pair(value1: A, value2: A) -> Self {
+        assert!(Self::CAPACITY >= 2);
         let mut buffer = Self {
             origin: 0.into(),
             length: 2,
@@ -1120,5 +1122,17 @@ mod test {
             assert_eq!(30, counter.load(Ordering::Relaxed));
         }
         assert_eq!(0, counter.load(Ordering::Relaxed));
+    }
+
+    #[test]
+    #[should_panic(expected = "assertion failed: Self::CAPACITY >= 1")]
+    fn unit_on_empty() {
+        RingBuffer::<usize, U0>::unit(1);
+    }
+
+    #[test]
+    #[should_panic(expected = "assertion failed: Self::CAPACITY >= 2")]
+    fn pair_on_empty() {
+        RingBuffer::<usize, U0>::pair(1, 2);
     }
 }

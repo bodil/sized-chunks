@@ -151,6 +151,7 @@ where
 
     /// Construct a new chunk with one item.
     pub fn unit(value: A) -> Self {
+        assert!(Self::CAPACITY >= 1);
         let mut chunk = Self {
             left: 0,
             right: 1,
@@ -164,6 +165,7 @@ where
 
     /// Construct a new chunk with two items.
     pub fn pair(left: A, right: A) -> Self {
+        assert!(Self::CAPACITY >= 2);
         let mut chunk = Self {
             left: 0,
             right: 2,
@@ -817,6 +819,7 @@ where
     N: ChunkLength<A>,
 {
     fn from(array: &mut InlineArray<A, T>) -> Self {
+        assert!(array.len() <= Self::CAPACITY);
         let mut out = Self::new();
         out.left = 0;
         out.right = array.len();
@@ -975,6 +978,8 @@ where
 
 #[cfg(test)]
 mod test {
+    use typenum::U0;
+
     use super::*;
 
     #[test]
@@ -1182,5 +1187,17 @@ mod test {
             assert_eq!(30, counter.load(Ordering::Relaxed));
         }
         assert_eq!(0, counter.load(Ordering::Relaxed));
+    }
+
+    #[test]
+    #[should_panic(expected = "assertion failed: Self::CAPACITY >= 1")]
+    fn unit_on_empty() {
+        Chunk::<usize, U0>::unit(1);
+    }
+
+    #[test]
+    #[should_panic(expected = "assertion failed: Self::CAPACITY >= 2")]
+    fn pair_on_empty() {
+        Chunk::<usize, U0>::pair(1, 2);
     }
 }
