@@ -15,10 +15,6 @@ exclude = ["release.toml", "proptest-regressions/**"]
 [package.metadata.docs.rs]
 all-features = true
 
-[[bench]]
-name = "sized_chunk"
-harness = false
-
 [features]
 default = ["std"]
 std = []
@@ -30,6 +26,3 @@ bitmaps = "2.0.0"
 array-ops = { version = "0.1", optional = true }
 refpool = { version = "0.4", optional = true }
 arbitrary = { version = "0.4", optional = true }
-
-[dev-dependencies]
-criterion = "0.3"
