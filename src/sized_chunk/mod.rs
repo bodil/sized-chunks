@@ -151,6 +151,7 @@ where
 
     /// Construct a new chunk with one item.
     pub fn unit(value: A) -> Self {
+        assert!(Self::CAPACITY >= 1, "capacity");
         let mut chunk = Self {
             left: 0,
             right: 1,
@@ -164,6 +165,7 @@ where
 
     /// Construct a new chunk with two items.
     pub fn pair(left: A, right: A) -> Self {
+        assert!(Self::CAPACITY >= 2, "capacity");
         let mut chunk = Self {
             left: 0,
             right: 2,
@@ -976,6 +978,32 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
+    use typenum::{U0, U1, U2};
+
+    #[test]
+    #[should_panic(expected = "capacity")]
+    fn issue_11_testcase1a() {
+        let _ = Chunk::<usize, U0>::unit(123);
+    }
+
+    #[test]
+    #[should_panic(expected = "capacity")]
+    fn issue_11_testcase1b() {
+        let _ = Chunk::<usize, U0>::pair(123, 456);
+    }
+
+    #[test]
+    #[should_panic(expected = "capacity")]
+    fn issue_11_testcase1c() {
+        let _ = Chunk::<usize, U1>::pair(123, 456);
+    }
+
+    #[test]
+    #[should_panic(expected = "Chunk::push_back: can't push to full chunk")]
+    fn issue_11_testcase1d() {
+        let mut chunk = Chunk::<usize, U2>::pair(123, 456);
+        chunk.push_back(789);
+    }
 
     #[test]
     fn is_full() {
