@@ -124,11 +124,12 @@ where
 {
     fn clone(&self) -> Self {
         let mut out = Self::new();
-        out.left = self.left;
-        out.right = self.right;
         for index in self.left..self.right {
             unsafe { Chunk::force_write(index, (*self.ptr(index)).clone(), &mut out) }
         }
+        // must be set after writes for panic safety
+        out.left = self.left;
+        out.right = self.right;
         out
     }
 }
@@ -259,6 +260,7 @@ where
         (&self.data as *const _ as *const A).add(index)
     }
 
+    /// It has no bounds checks
     #[inline]
     unsafe fn mut_ptr(&mut self, index: usize) -> *mut A {
         (&mut self.data as *mut _ as *mut A).add(index)
@@ -270,7 +272,8 @@ where
         chunk.ptr(index).read()
     }
 
-    /// Write a value at an index without trying to drop what's already there
+    /// Write a value at an index without trying to drop what's already there.
+    /// It has no bounds checks.
     #[inline]
     unsafe fn force_write(index: usize, value: A, chunk: &mut Self) {
         chunk.mut_ptr(index).write(value)
@@ -980,7 +983,7 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
-    use typenum::{U0, U1, U2};
+    use typenum::{U0, U1, U2, U3};
 
     #[test]
     #[should_panic(expected = "capacity")]
@@ -1022,6 +1025,42 @@ mod test {
         from.push(1);
 
         let _ = Chunk::<u8, U1>::from(from);
+    }
+
+    struct DropDetector(u32);
+
+    impl DropDetector {
+        fn new(num: u32) -> Self {
+            println!("Creating {}", num);
+            DropDetector(num)
+        }
+    }
+
+    impl Drop for DropDetector {
+        fn drop(&mut self) {
+            println!("Dropping {}", self.0);
+        }
+    }
+
+    impl Clone for DropDetector {
+        fn clone(&self) -> Self {
+            if self.0 == 42 {
+                panic!("panic on clone")
+            }
+            DropDetector::new(self.0)
+        }
+    }
+
+    /// This is for miri to catch
+    #[test]
+    fn issue_11_testcase3a() {
+        let mut chunk = Chunk::<DropDetector, U3>::new();
+        chunk.push_back(DropDetector::new(42));
+        chunk.push_back(DropDetector::new(43));
+
+        let _ = std::panic::catch_unwind(|| {
+            let _ = chunk.clone();
+        });
     }
 
     #[test]
