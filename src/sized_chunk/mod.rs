@@ -810,6 +810,8 @@ where
 {
     #[inline]
     fn from(mut array: InlineArray<A, T>) -> Self {
+        // capacity comparison is to help optimize it out
+        assert!(Self::CAPACITY >= InlineArray::<A, T>::CAPACITY || Self::CAPACITY >= array.len(), "capacity");
         Self::from(&mut array)
     }
 }
@@ -1003,6 +1005,23 @@ mod test {
     fn issue_11_testcase1d() {
         let mut chunk = Chunk::<usize, U2>::pair(123, 456);
         chunk.push_back(789);
+    }
+
+    #[test]
+    #[should_panic(expected = "capacity")]
+    fn issue_11_testcase2a() {
+        let mut from = InlineArray::<u8, [u8; 256]>::new();
+        from.push(1);
+
+        let _ = Chunk::<u8, U0>::from(from);
+    }
+
+    #[test]
+    fn issue_11_testcase2b() {
+        let mut from = InlineArray::<u8, [u8; 256]>::new();
+        from.push(1);
+
+        let _ = Chunk::<u8, U1>::from(from);
     }
 
     #[test]
