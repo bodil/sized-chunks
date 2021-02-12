@@ -573,6 +573,7 @@ where
     {
         let iter = iter.into_iter();
         let insert_size = iter.len();
+        let iter = iter.take(insert_size);
         if self.len() + insert_size > Self::CAPACITY {
             panic!(
                 "Chunk::insert_from: chunk cannot fit {} elements",
@@ -588,13 +589,16 @@ where
         if self.right == N::USIZE || (self.left >= insert_size && left_size < right_size) {
             unsafe {
                 Chunk::force_copy(self.left, self.left - insert_size, left_size, self);
-                let mut write_index = real_index - insert_size;
+                let write_index_start = real_index - insert_size;
+                let mut written = 0;
                 for value in iter {
-                    Chunk::force_write(write_index, value, self);
-                    write_index += 1;
+                    Chunk::force_write(write_index_start + written, value, self);
+                    written += 1;
                 }
+                // update after writes for panic safety
+                // update actual number written in case iterator stopped earlier than promised
+                self.left -= written;
             }
-            self.left -= insert_size;
         } else if self.left == 0 || (self.right + insert_size <= Self::CAPACITY) {
             unsafe {
                 Chunk::force_copy(real_index, real_index + insert_size, right_size, self);
@@ -602,23 +606,25 @@ where
                 for value in iter {
                     Chunk::force_write(write_index, value, self);
                     write_index += 1;
+                    self.right += 1; // don't trust iterator length, which may be less than insert_size
                 }
             }
-            self.right += insert_size;
         } else {
             unsafe {
                 Chunk::force_copy(self.left, 0, left_size, self);
                 Chunk::force_copy(real_index, left_size + insert_size, right_size, self);
+                // order is important for panic safety
+                self.right -= self.left;
+                self.left = 0;
                 let mut write_index = left_size;
                 for value in iter {
                     Chunk::force_write(write_index, value, self);
                     write_index += 1;
+                    self.right += 1; // don't trust iterator length, which may be less than insert_size
                 }
             }
-            self.right -= self.left;
-            self.right += insert_size;
-            self.left = 0;
         }
+        debug_assert!(self.right >= self.left);
     }
 
     /// Remove the value at index `index`, shifting all the following values to
@@ -983,7 +989,7 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
-    use typenum::{U0, U1, U2, U3};
+    use typenum::{U0, U1, U2, U3, U5};
 
     #[test]
     #[should_panic(expected = "capacity")]
@@ -1061,6 +1067,108 @@ mod test {
         let _ = std::panic::catch_unwind(|| {
             let _ = chunk.clone();
         });
+    }
+
+
+    struct PanickingIterator {
+        current: u32,
+        panic_at: u32,
+        len: usize,
+    }
+
+    impl Iterator for PanickingIterator {
+        type Item = DropDetector;
+
+        fn next(&mut self) -> Option<Self::Item> {
+            let num = self.current;
+
+            if num == self.panic_at {
+                panic!("panicking index")
+            }
+
+            self.current += 1;
+            Some(DropDetector::new(num))
+        }
+
+        fn size_hint(&self) -> (usize, Option<usize>) {
+            (self.len, Some(self.len))
+        }
+    }
+
+    impl ExactSizeIterator for PanickingIterator {}
+
+    #[test]
+    fn issue_11_testcase3b() {
+        let _ = std::panic::catch_unwind(|| {
+            let mut chunk = Chunk::<DropDetector, U5>::new();
+            chunk.push_back(DropDetector::new(1));
+            chunk.push_back(DropDetector::new(2));
+            chunk.push_back(DropDetector::new(3));
+
+            chunk.insert_from(
+                1,
+                PanickingIterator {
+                    current: 1,
+                    panic_at: 1,
+                    len: 1,
+                },
+            );
+        });
+    }
+
+    struct FakeSizeIterator { reported: usize, actual: usize }
+    impl Iterator for FakeSizeIterator {
+        type Item = u8;
+        fn next(&mut self) -> Option<Self::Item> {
+            if self.actual == 0 {
+                None
+            } else {
+                self.actual -= 1;
+                Some(1)
+            }
+        }
+
+        fn size_hint(&self) -> (usize, Option<usize>) {
+            (self.reported, Some(self.reported))
+        }
+    }
+
+    impl ExactSizeIterator for FakeSizeIterator {
+        fn len(&self) -> usize {
+            self.reported
+        }
+    }
+
+    #[test]
+    fn iterator_too_long() {
+        let mut chunk = Chunk::<u8, U5>::new();
+        chunk.push_back(0);
+        chunk.push_back(1);
+        chunk.push_back(2);
+        chunk.insert_from(1, FakeSizeIterator { reported: 1, actual: 10 });
+
+        let mut chunk = Chunk::<u8, U5>::new();
+        chunk.push_back(1);
+        chunk.insert_from(0, FakeSizeIterator { reported: 1, actual: 10 });
+
+        let mut chunk = Chunk::<u8, U5>::new();
+        chunk.insert_from(0, FakeSizeIterator { reported: 1, actual: 10 });
+    }
+
+    #[test]
+    fn iterator_too_short() {
+        let mut chunk = Chunk::<u8, U5>::new();
+        chunk.push_back(0);
+        chunk.push_back(1);
+        chunk.push_back(2);
+        chunk.insert_from(1, FakeSizeIterator { reported: 2, actual: 0 });
+
+        let mut chunk = Chunk::<u8, U5>::new();
+        chunk.push_back(1);
+        chunk.insert_from(1, FakeSizeIterator { reported: 4, actual: 0 });
+
+        let mut chunk = Chunk::<u8, U5>::new();
+        chunk.insert_from(0, FakeSizeIterator { reported: 4, actual: 0 });
     }
 
     #[test]
