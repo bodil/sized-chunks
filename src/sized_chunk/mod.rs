@@ -125,9 +125,13 @@ where
     fn clone(&self) -> Self {
         let mut out = Self::new();
         out.left = self.left;
-        out.right = self.right;
+        out.right = self.left;
         for index in self.left..self.right {
             unsafe { Chunk::force_write(index, (*self.ptr(index)).clone(), &mut out) }
+            // Panic safety, move the right index to cover only the really initialized things. This
+            // way we don't try to drop uninitialized, but also don't leak if we panic in the
+            // middle.
+            out.right = index + 1;
         }
         out
     }
@@ -151,6 +155,7 @@ where
 
     /// Construct a new chunk with one item.
     pub fn unit(value: A) -> Self {
+        assert!(Self::CAPACITY >= 1);
         let mut chunk = Self {
             left: 0,
             right: 1,
@@ -164,6 +169,7 @@ where
 
     /// Construct a new chunk with two items.
     pub fn pair(left: A, right: A) -> Self {
+        assert!(Self::CAPACITY >= 2);
         let mut chunk = Self {
             left: 0,
             right: 2,
@@ -280,6 +286,49 @@ where
         if count > 0 {
             ptr::copy(chunk.ptr(from), chunk.mut_ptr(to), count)
         }
+    }
+
+    /// Write values from iterator into range starting at write_index.
+    ///
+    /// Will overwrite values at the relevant range without dropping even in case the values were
+    /// already initialized (it is expected they are empty). Does not update the left or right
+    /// index.
+    ///
+    /// # Safety
+    ///
+    /// Range checks must already have been performed.
+    ///
+    /// # Panics
+    ///
+    /// If the iterator panics, the chunk becomes conceptually empty and will leak any previous
+    /// elements (even the ones outside the range).
+    #[inline]
+    unsafe fn write_from_iter<I>(mut write_index: usize, iter: I, chunk: &mut Self)
+    where
+        I: ExactSizeIterator<Item = A>,
+    {
+        // Panic safety. We make the array conceptually empty, so we never ever drop anything that
+        // is unitialized. We do so because we expect to be called when there's a potential "hole"
+        // in the array that makes the space for the new elements to be written. We return it back
+        // to original when everything goes fine, but leak any elements on panic. This is bad, but
+        // better than dropping non-existing stuff.
+        //
+        // Should we worry about some better panic recovery than this?
+        let left = replace(&mut chunk.left, 0);
+        let right = replace(&mut chunk.right, 0);
+        let len = iter.len();
+        let expected_end = write_index + len;
+        for value in iter.take(len) {
+            Chunk::force_write(write_index, value, chunk);
+            write_index += 1;
+        }
+        // Oops, we have a hole in here now. That would be bad, give up.
+        assert_eq!(
+            expected_end, write_index,
+            "ExactSizeIterator yielded fewer values than advertised",
+        );
+        chunk.left = left;
+        chunk.right = right;
     }
 
     /// Copy a range between chunks
@@ -583,32 +632,23 @@ where
         if self.right == N::USIZE || (self.left >= insert_size && left_size < right_size) {
             unsafe {
                 Chunk::force_copy(self.left, self.left - insert_size, left_size, self);
-                let mut write_index = real_index - insert_size;
-                for value in iter {
-                    Chunk::force_write(write_index, value, self);
-                    write_index += 1;
-                }
+                let write_index = real_index - insert_size;
+                Chunk::write_from_iter(write_index, iter, self);
             }
             self.left -= insert_size;
         } else if self.left == 0 || (self.right + insert_size <= Self::CAPACITY) {
             unsafe {
                 Chunk::force_copy(real_index, real_index + insert_size, right_size, self);
-                let mut write_index = real_index;
-                for value in iter {
-                    Chunk::force_write(write_index, value, self);
-                    write_index += 1;
-                }
+                let write_index = real_index;
+                Chunk::write_from_iter(write_index, iter, self);
             }
             self.right += insert_size;
         } else {
             unsafe {
                 Chunk::force_copy(self.left, 0, left_size, self);
                 Chunk::force_copy(real_index, left_size + insert_size, right_size, self);
-                let mut write_index = left_size;
-                for value in iter {
-                    Chunk::force_write(write_index, value, self);
-                    write_index += 1;
-                }
+                let write_index = left_size;
+                Chunk::write_from_iter(write_index, iter, self);
             }
             self.right -= self.left;
             self.right += insert_size;
@@ -817,6 +857,7 @@ where
     N: ChunkLength<A>,
 {
     fn from(array: &mut InlineArray<A, T>) -> Self {
+        assert!(array.len() <= Self::CAPACITY);
         let mut out = Self::new();
         out.left = 0;
         out.right = array.len();
@@ -975,6 +1016,8 @@ where
 
 #[cfg(test)]
 mod test {
+    use typenum::U0;
+
     use super::*;
 
     #[test]
@@ -1182,5 +1225,17 @@ mod test {
             assert_eq!(30, counter.load(Ordering::Relaxed));
         }
         assert_eq!(0, counter.load(Ordering::Relaxed));
+    }
+
+    #[test]
+    #[should_panic(expected = "assertion failed: Self::CAPACITY >= 1")]
+    fn unit_on_empty() {
+        Chunk::<usize, U0>::unit(1);
+    }
+
+    #[test]
+    #[should_panic(expected = "assertion failed: Self::CAPACITY >= 2")]
+    fn pair_on_empty() {
+        Chunk::<usize, U0>::pair(1, 2);
     }
 }
