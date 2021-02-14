@@ -860,7 +860,10 @@ where
 {
     fn from(array: &mut InlineArray<A, T>) -> Self {
         // The first capacity comparison is to help optimize it out
-        assert!(InlineArray::<A, T>::CAPACITY <= Self::CAPACITY || array.len() <= Self::CAPACITY, "CAPACITY too small");
+        assert!(
+            InlineArray::<A, T>::CAPACITY <= Self::CAPACITY || array.len() <= Self::CAPACITY,
+            "CAPACITY too small"
+        );
         let mut out = Self::new();
         out.left = 0;
         out.right = array.len();
@@ -1018,6 +1021,7 @@ where
 }
 
 #[cfg(test)]
+#[rustfmt::skip]
 mod test {
     use super::*;
     use typenum::{U0, U1, U2, U3, U5};
@@ -1082,7 +1086,6 @@ mod test {
             let _ = chunk.clone();
         });
     }
-
 
     struct PanickingIterator {
         current: u32,
