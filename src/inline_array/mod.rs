@@ -11,6 +11,7 @@ use core::cmp::Ordering;
 use core::fmt::{Debug, Error, Formatter};
 use core::hash::{Hash, Hasher};
 use core::iter::FromIterator;
+use core::marker::PhantomData;
 use core::mem::{self, MaybeUninit};
 use core::ops::{Deref, DerefMut};
 use core::ptr;
@@ -88,6 +89,10 @@ pub struct InlineArray<A, T> {
     // 3 start at the beginning of the struct and that all of them are aligned to their maximum
     // alignment.
     //
+    // Unfortunately, we can't use `[A; 0]` to align to actual alignment of the type A, because
+    // it prevents use of InlineArray in recursive types.
+    // We rely on alignment of usize or T to be sufficient, and panic otherwise.
+    //
     // Furthermore, because we don't know if usize or A has bigger alignment, we decide on case by
     // case basis if the header or the elements go first. By placing the one with higher alignment
     // requirements first, we align that one and the other one will be aligned "automatically" when
@@ -97,18 +102,24 @@ pub struct InlineArray<A, T> {
     // we have bunch of asserts in the constructor to check; as these are invariants enforced by
     // the compiler, it should be trivial for it to remove the checks so they are for free (if we
     // are correct) or will save us (if we are not).
-    //
-    // Additionally, the [A; 0] serves as a form of PhantomData.
     _header_align: [usize; 0],
-    _data_align: [A; 0],
+    _phantom: PhantomData<A>,
     data: MaybeUninit<T>,
 }
 
-const fn capacity(host_size: usize, header_size: usize, element_size: usize) -> usize {
+const fn capacity(
+    host_size: usize,
+    header_size: usize,
+    element_size: usize,
+    element_align: usize,
+    container_align: usize,
+) -> usize {
     if element_size == 0 {
         usize::MAX
-    } else {
+    } else if element_align <= container_align && host_size > header_size {
         (host_size - header_size) / element_size
+    } else {
+        0 // larger alignment can't be guaranteed, so it'd be unsafe to store any elements
     }
 }
 
@@ -125,7 +136,13 @@ impl<A, T> InlineArray<A, T> {
     const HEADER_SKIP: usize = Self::CAPACITY * (1 - Self::ELEMENT_SKIP);
 
     /// The maximum number of elements the `InlineArray` can hold.
-    pub const CAPACITY: usize = capacity(Self::HOST_SIZE, Self::HEADER_SIZE, Self::ELEMENT_SIZE);
+    pub const CAPACITY: usize = capacity(
+        Self::HOST_SIZE,
+        Self::HEADER_SIZE,
+        Self::ELEMENT_SIZE,
+        mem::align_of::<A>(),
+        mem::align_of::<Self>(),
+    );
 
     #[inline]
     #[must_use]
@@ -223,13 +240,24 @@ impl<A, T> InlineArray<A, T> {
     }
 
     /// Construct a new empty array.
+    ///
+    /// # Panics
+    ///
+    /// If the element type requires large alignment, which is larger than
+    /// both alignment of `usize` and alignment of the type that provides the capacity.
     #[inline]
     #[must_use]
     pub fn new() -> Self {
         assert!(Self::HOST_SIZE > Self::HEADER_SIZE);
+        assert!(
+            mem::align_of::<Self>() % mem::align_of::<A>() == 0,
+            "InlineArray can't satisfy alignment of {}",
+            core::any::type_name::<A>()
+        );
+
         let mut self_ = Self {
             _header_align: [],
-            _data_align: [],
+            _phantom: PhantomData,
             data: MaybeUninit::uninit(),
         };
         // Sanity check our assumptions about what is guaranteed by the compiler. If we are right,
@@ -249,10 +277,6 @@ impl<A, T> InlineArray<A, T> {
             self_.data.as_ptr() as usize % mem::align_of::<A>(),
             0,
             "Unaligned elements"
-        );
-        assert!(
-            mem::align_of::<A>() % mem::align_of::<usize>() == 0
-                || mem::align_of::<usize>() % mem::align_of::<A>() == 0
         );
         assert!(Self::ELEMENT_SKIP == 0 || Self::HEADER_SKIP == 0);
         unsafe { ptr::write(self_.len_mut(), 0usize) };
@@ -608,15 +632,76 @@ mod test {
         let mut chunk: InlineArray<String, [u8; 512]> = InlineArray::new();
         chunk.push("Hello".to_owned());
         assert_eq!(chunk[0], "Hello");
+
+        let mut chunk: InlineArray<String, [u16; 512]> = InlineArray::new();
+        chunk.push("Hello".to_owned());
+        assert_eq!(chunk[0], "Hello");
     }
 
     #[test]
-    fn big_align_elem() {
+    fn recursive_types_compile() {
+        #[allow(dead_code)]
+        enum Recursive {
+            A(InlineArray<Recursive, u64>),
+            B,
+        }
+    }
+
+    #[test]
+    fn insufficient_alignment1() {
+        #[repr(align(256))]
+        struct BigAlign(u8);
+        #[repr(align(32))]
+        struct MediumAlign(u8);
+
+        assert_eq!(0, InlineArray::<BigAlign, [usize; 256]>::CAPACITY);
+        assert_eq!(0, InlineArray::<BigAlign, [u64; 256]>::CAPACITY);
+        assert_eq!(0, InlineArray::<BigAlign, [f64; 256]>::CAPACITY);
+        assert_eq!(0, InlineArray::<BigAlign, [MediumAlign; 256]>::CAPACITY);
+    }
+
+    #[test]
+    #[should_panic(
+        expected = "InlineArray can't satisfy alignment of sized_chunks::inline_array::test::insufficient_alignment2::BigAlign"
+    )]
+    fn insufficient_alignment2() {
         #[repr(align(256))]
         struct BigAlign(usize);
 
-        let mut chunk: InlineArray<BigAlign, [usize; 256]> = InlineArray::new();
+        let _: InlineArray<BigAlign, [usize; 256]> = InlineArray::new();
+    }
+
+    #[test]
+    fn sufficient_alignment1() {
+        #[repr(align(256))]
+        struct BigAlign(u8);
+
+        assert_eq!(13, InlineArray::<BigAlign, [BigAlign; 14]>::CAPACITY);
+        assert_eq!(1, InlineArray::<BigAlign, [BigAlign; 2]>::CAPACITY);
+        assert_eq!(0, InlineArray::<BigAlign, [BigAlign; 1]>::CAPACITY);
+
+        let mut chunk: InlineArray<BigAlign, [BigAlign; 2]> = InlineArray::new();
         chunk.push(BigAlign(42));
+        assert_eq!(
+            chunk.get(0).unwrap() as *const _ as usize % mem::align_of::<BigAlign>(),
+            0
+        );
+    }
+
+    #[test]
+    fn sufficient_alignment2() {
+        #[repr(align(128))]
+        struct BigAlign([u8; 64]);
+        #[repr(align(256))]
+        struct BiggerAlign(u8);
+
+        assert_eq!(199, InlineArray::<BigAlign, [BiggerAlign; 100]>::CAPACITY);
+        assert_eq!(3, InlineArray::<BigAlign, [BiggerAlign; 2]>::CAPACITY);
+        assert_eq!(1, InlineArray::<BigAlign, [BiggerAlign; 1]>::CAPACITY);
+        assert_eq!(0, InlineArray::<BigAlign, [BiggerAlign; 0]>::CAPACITY);
+
+        let mut chunk: InlineArray<BigAlign, [BiggerAlign; 1]> = InlineArray::new();
+        chunk.push(BigAlign([0; 64]));
         assert_eq!(
             chunk.get(0).unwrap() as *const _ as usize % mem::align_of::<BigAlign>(),
             0
