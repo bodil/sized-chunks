@@ -5,7 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) and this project
 adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-## [0.6.3] - 2021-02-14 - 2021-02-14
+## [Unreleased]
+
+### FIXED
+
+-  `InlineArray` can be used in recursive types again.
+
+### CHANGED
+
+-  `InlineArray::new()` now panics when it can't store elements with large alignment
+    (this was UB prior to 0.6.3). Alignments of `usize` and smaller are always supported.
+    Larger alignments are supported if the capacity-providing type has sufficient alignment.
+
+## [0.6.3] - 2021-02-14
 
 ### FIXED
 
