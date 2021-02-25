@@ -12,10 +12,7 @@ mod assert;
 use assert::assert_panic;
 
 #[derive(Arbitrary, Debug)]
-enum Construct<A>
-where
-    A: Arbitrary,
-{
+enum Construct<A> {
     Empty,
     Single(A),
     Pair((A, A)),
@@ -26,10 +23,7 @@ where
 }
 
 #[derive(Arbitrary, Debug)]
-enum Action<A>
-where
-    A: Arbitrary,
-{
+enum Action<A> {
     PushFront(A),
     PushBack(A),
     PopFront,
@@ -51,7 +45,7 @@ where
 
 impl<A> Construct<A>
 where
-    A: Arbitrary + Clone + Debug + Eq,
+    A: Arbitrary<'static> + Clone + Debug + Eq,
 {
     fn make(self) -> Chunk<A> {
         match self {
