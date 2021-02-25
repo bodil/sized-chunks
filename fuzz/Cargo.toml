@@ -9,9 +9,9 @@ edition = "2018"
 cargo-fuzz = true
 
 [dependencies]
-array-ops = "0.1"
-libfuzzer-sys = "0.3"
-arbitrary = { version = "0.4", features = ["derive"] }
+array-ops = "0.1.0"
+libfuzzer-sys = "0.4.0"
+arbitrary = { version = "1.0.0", features = ["derive"] }
 
 [dependencies.sized-chunks]
 path = ".."

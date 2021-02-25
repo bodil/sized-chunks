@@ -27,7 +27,7 @@ enum Action<A> {
 
 impl<A> Construct<A>
 where
-    A: Arbitrary + Clone + Debug + Eq,
+    A: Arbitrary<'static> + Clone + Debug + Eq,
 {
     fn make(self) -> SparseChunk<A> {
         match self {

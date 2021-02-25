@@ -13,10 +13,7 @@ use assert::assert_panic;
 type TestType = [usize; 16];
 
 #[derive(Arbitrary, Debug)]
-enum Action<A>
-where
-    A: Arbitrary,
-{
+enum Action<A> {
     Push(A),
     Pop,
     Set((usize, A)),
