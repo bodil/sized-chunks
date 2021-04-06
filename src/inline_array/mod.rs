@@ -15,6 +15,7 @@ use core::marker::PhantomData;
 use core::mem::{self, MaybeUninit};
 use core::ops::{Deref, DerefMut};
 use core::ptr;
+use core::ptr::NonNull;
 use core::slice::{from_raw_parts, from_raw_parts_mut, Iter as SliceIter, IterMut as SliceIterMut};
 
 mod iter;
@@ -174,6 +175,9 @@ impl<A, T> InlineArray<A, T> {
     #[inline]
     #[must_use]
     pub(crate) unsafe fn data(&self) -> *const A {
+        if Self::CAPACITY == 0 {
+            return NonNull::<A>::dangling().as_ptr();
+        }
         let ptr = self
             .data
             .as_ptr()
@@ -187,6 +191,9 @@ impl<A, T> InlineArray<A, T> {
     #[inline]
     #[must_use]
     unsafe fn data_mut(&mut self) -> *mut A {
+        if Self::CAPACITY == 0 {
+            return NonNull::<A>::dangling().as_ptr();
+        }
         let ptr = self
             .data
             .as_mut_ptr()
@@ -200,12 +207,14 @@ impl<A, T> InlineArray<A, T> {
     #[inline]
     #[must_use]
     unsafe fn ptr_at(&self, index: usize) -> *const A {
+        debug_assert!(index < Self::CAPACITY);
         self.data().add(index)
     }
 
     #[inline]
     #[must_use]
     unsafe fn ptr_at_mut(&mut self, index: usize) -> *mut A {
+        debug_assert!(index < Self::CAPACITY);
         self.data_mut().add(index)
     }
 
@@ -251,7 +260,7 @@ impl<A, T> InlineArray<A, T> {
     pub fn new() -> Self {
         assert!(Self::HOST_SIZE > Self::HEADER_SIZE);
         assert!(
-            mem::align_of::<Self>() % mem::align_of::<A>() == 0,
+            (Self::CAPACITY == 0) || (mem::align_of::<Self>() % mem::align_of::<A>() == 0),
             "InlineArray can't satisfy alignment of {}",
             core::any::type_name::<A>()
         );
@@ -670,14 +679,20 @@ mod test {
     }
 
     #[test]
-    #[should_panic(
-        expected = "InlineArray can't satisfy alignment of sized_chunks::inline_array::test::insufficient_alignment2::BigAlign"
-    )]
     fn insufficient_alignment2() {
         #[repr(align(256))]
         struct BigAlign(usize);
 
-        let _: InlineArray<BigAlign, [usize; 256]> = InlineArray::new();
+        let mut bad: InlineArray<BigAlign, [usize; 256]> = InlineArray::new();
+        assert_eq!(0, InlineArray::<BigAlign, [usize; 256]>::CAPACITY);
+        assert_eq!(0, bad.len());
+        assert_eq!(0, bad[..].len());
+        assert_eq!(true, bad.is_full());
+        assert_eq!(0, bad.drain().count());
+        assert!(bad.pop().is_none());
+        assert!(bad.remove(0).is_none());
+        assert!(bad.split_off(0).is_full());
+        bad.clear();
     }
 
     #[test]
