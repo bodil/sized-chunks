@@ -89,11 +89,12 @@ pub struct InlineArray<A, T> {
     // 3 start at the beginning of the struct and that all of them are aligned to their maximum
     // alignment.
     //
-    // Unfortunately, we can't use `[A; 0]` to align to actual alignment of the type A, because
-    // it prevents use of InlineArray in recursive types.
-    // We rely on alignment of usize or T to be sufficient, and panic otherwise.
+    // Unfortunately, we can't use `[A; 0]` to align to actual alignment of the type `A`, because
+    // it prevents use of `InlineArray` in recursive types.
+    // We rely on alignment of `u64`/`usize` or `T` to be sufficient, and panic otherwise. We use
+    // `u64` to handle all common types on 32-bit systems too.
     //
-    // Furthermore, because we don't know if usize or A has bigger alignment, we decide on case by
+    // Furthermore, because we don't know if `u64` or `A` has bigger alignment, we decide on case by
     // case basis if the header or the elements go first. By placing the one with higher alignment
     // requirements first, we align that one and the other one will be aligned "automatically" when
     // placed just after it.
@@ -102,7 +103,7 @@ pub struct InlineArray<A, T> {
     // we have bunch of asserts in the constructor to check; as these are invariants enforced by
     // the compiler, it should be trivial for it to remove the checks so they are for free (if we
     // are correct) or will save us (if we are not).
-    _header_align: [usize; 0],
+    _header_align: [(u64, usize); 0],
     _phantom: PhantomData<A>,
     data: MaybeUninit<T>,
 }
@@ -702,6 +703,8 @@ mod test {
         struct BigAlign([u8; 64]);
         #[repr(align(256))]
         struct BiggerAlign(u8);
+        assert_eq!(128, mem::align_of::<BigAlign>());
+        assert_eq!(256, mem::align_of::<BiggerAlign>());
 
         assert_eq!(199, InlineArray::<BigAlign, [BiggerAlign; 100]>::CAPACITY);
         assert_eq!(3, InlineArray::<BigAlign, [BiggerAlign; 2]>::CAPACITY);
