@@ -7,6 +7,8 @@ adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [0.6.5] - 2021-04-16
 
+### FIXED
+
 -   When `InlineArray` cannot hold any values because of misalignment, report it as capacity 0
     instead of panicking at runtime. (#22)
 
