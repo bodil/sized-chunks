@@ -3,14 +3,11 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 use core::iter::FusedIterator;
-use core::marker::PhantomData;
 use core::ops::{Add, AddAssign, Sub, SubAssign};
 
-use typenum::Unsigned;
+pub(crate) struct RawIndex<const N: usize>(usize);
 
-pub(crate) struct RawIndex<N: Unsigned>(usize, PhantomData<N>);
-
-impl<N: Unsigned> Clone for RawIndex<N> {
+impl<const N: usize> Clone for RawIndex<N> {
     #[inline]
     #[must_use]
     fn clone(&self) -> Self {
@@ -18,9 +15,9 @@ impl<N: Unsigned> Clone for RawIndex<N> {
     }
 }
 
-impl<N> Copy for RawIndex<N> where N: Unsigned {}
+impl<const N: usize> Copy for RawIndex<N> {}
 
-impl<N: Unsigned> RawIndex<N> {
+impl<const N: usize> RawIndex<N> {
     #[inline]
     #[must_use]
     pub(crate) fn to_usize(self) -> usize {
@@ -32,11 +29,7 @@ impl<N: Unsigned> RawIndex<N> {
     #[must_use]
     pub(crate) fn inc(&mut self) -> Self {
         let old = *self;
-        self.0 = if self.0 == N::USIZE - 1 {
-            0
-        } else {
-            self.0 + 1
-        };
+        self.0 = if self.0 == N - 1 { 0 } else { self.0 + 1 };
         old
     }
 
@@ -44,25 +37,21 @@ impl<N: Unsigned> RawIndex<N> {
     #[inline]
     #[must_use]
     pub(crate) fn dec(&mut self) -> Self {
-        self.0 = if self.0 == 0 {
-            N::USIZE - 1
-        } else {
-            self.0 - 1
-        };
+        self.0 = if self.0 == 0 { N - 1 } else { self.0 - 1 };
         *self
     }
 }
 
-impl<N: Unsigned> From<usize> for RawIndex<N> {
+impl<const N: usize> From<usize> for RawIndex<N> {
     #[inline]
     #[must_use]
     fn from(index: usize) -> Self {
-        debug_assert!(index < N::USIZE);
-        RawIndex(index, PhantomData)
+        debug_assert!(index < N);
+        RawIndex(index)
     }
 }
 
-impl<N: Unsigned> PartialEq for RawIndex<N> {
+impl<const N: usize> PartialEq for RawIndex<N> {
     #[inline]
     #[must_use]
     fn eq(&self, other: &Self) -> bool {
@@ -70,9 +59,9 @@ impl<N: Unsigned> PartialEq for RawIndex<N> {
     }
 }
 
-impl<N: Unsigned> Eq for RawIndex<N> {}
+impl<const N: usize> Eq for RawIndex<N> {}
 
-impl<N: Unsigned> Add for RawIndex<N> {
+impl<const N: usize> Add for RawIndex<N> {
     type Output = RawIndex<N>;
     #[inline]
     #[must_use]
@@ -81,30 +70,30 @@ impl<N: Unsigned> Add for RawIndex<N> {
     }
 }
 
-impl<N: Unsigned> Add<usize> for RawIndex<N> {
+impl<const N: usize> Add<usize> for RawIndex<N> {
     type Output = RawIndex<N>;
     #[inline]
     #[must_use]
     fn add(self, other: usize) -> Self::Output {
         let mut result = self.0 + other;
-        while result >= N::USIZE {
-            result -= N::USIZE;
+        while result >= N {
+            result -= N;
         }
         result.into()
     }
 }
 
-impl<N: Unsigned> AddAssign<usize> for RawIndex<N> {
+impl<const N: usize> AddAssign<usize> for RawIndex<N> {
     #[inline]
     fn add_assign(&mut self, other: usize) {
         self.0 += other;
-        while self.0 >= N::USIZE {
-            self.0 -= N::USIZE;
+        while self.0 >= N {
+            self.0 -= N;
         }
     }
 }
 
-impl<N: Unsigned> Sub for RawIndex<N> {
+impl<const N: usize> Sub for RawIndex<N> {
     type Output = RawIndex<N>;
     #[inline]
     #[must_use]
@@ -113,36 +102,36 @@ impl<N: Unsigned> Sub for RawIndex<N> {
     }
 }
 
-impl<N: Unsigned> Sub<usize> for RawIndex<N> {
+impl<const N: usize> Sub<usize> for RawIndex<N> {
     type Output = RawIndex<N>;
     #[inline]
     #[must_use]
     fn sub(self, other: usize) -> Self::Output {
         let mut start = self.0;
         while other > start {
-            start += N::USIZE;
+            start += N;
         }
         (start - other).into()
     }
 }
 
-impl<N: Unsigned> SubAssign<usize> for RawIndex<N> {
+impl<const N: usize> SubAssign<usize> for RawIndex<N> {
     #[inline]
     fn sub_assign(&mut self, other: usize) {
         while other > self.0 {
-            self.0 += N::USIZE;
+            self.0 += N;
         }
         self.0 -= other;
     }
 }
 
-pub(crate) struct IndexIter<N: Unsigned> {
+pub(crate) struct IndexIter<const N: usize> {
     pub(crate) remaining: usize,
     pub(crate) left_index: RawIndex<N>,
     pub(crate) right_index: RawIndex<N>,
 }
 
-impl<N: Unsigned> Iterator for IndexIter<N> {
+impl<const N: usize> Iterator for IndexIter<N> {
     type Item = RawIndex<N>;
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
@@ -161,7 +150,7 @@ impl<N: Unsigned> Iterator for IndexIter<N> {
     }
 }
 
-impl<N: Unsigned> DoubleEndedIterator for IndexIter<N> {
+impl<const N: usize> DoubleEndedIterator for IndexIter<N> {
     #[inline]
     fn next_back(&mut self) -> Option<Self::Item> {
         if self.remaining > 0 {
@@ -173,6 +162,6 @@ impl<N: Unsigned> DoubleEndedIterator for IndexIter<N> {
     }
 }
 
-impl<N: Unsigned> ExactSizeIterator for IndexIter<N> {}
+impl<const N: usize> ExactSizeIterator for IndexIter<N> {}
 
-impl<N: Unsigned> FusedIterator for IndexIter<N> {}
+impl<const N: usize> FusedIterator for IndexIter<N> {}

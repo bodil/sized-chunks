@@ -2,19 +2,19 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use bitmaps::Bits;
+use bitmaps::{Bits, BitsImpl};
 
 use ::arbitrary::{size_hint, Arbitrary, Result, Unstructured};
 
-use crate::{types::ChunkLength, Chunk, InlineArray, SparseChunk};
+use crate::{Chunk, InlineArray, SparseChunk};
 
 #[cfg(feature = "ringbuffer")]
 use crate::RingBuffer;
 
-impl<'a, A, N> Arbitrary<'a> for Chunk<A, N>
+impl<'a, A, const N: usize> Arbitrary<'a> for Chunk<A, N>
 where
     A: Arbitrary<'a>,
-    N: ChunkLength<A> + 'static,
+    BitsImpl<N>: Bits,
 {
     fn arbitrary(u: &mut Unstructured<'a>) -> Result<Self> {
         u.arbitrary_iter()?.take(Self::CAPACITY).collect()
@@ -33,10 +33,10 @@ where
 }
 
 #[cfg(feature = "ringbuffer")]
-impl<'a, A, N> Arbitrary<'a> for RingBuffer<A, N>
+impl<'a, A, const N: usize> Arbitrary<'a> for RingBuffer<A, N>
 where
     A: Arbitrary<'a>,
-    N: ChunkLength<A> + 'static,
+    BitsImpl<N>: Bits,
 {
     fn arbitrary(u: &mut Unstructured<'a>) -> Result<Self> {
         u.arbitrary_iter()?.take(Self::CAPACITY).collect()
@@ -54,11 +54,11 @@ where
     }
 }
 
-impl<'a, A, N> Arbitrary<'a> for SparseChunk<A, N>
+impl<'a, A, const N: usize> Arbitrary<'a> for SparseChunk<A, N>
 where
     A: Clone,
     Option<A>: Arbitrary<'a>,
-    N: ChunkLength<A> + Bits + 'static,
+    BitsImpl<N>: Bits,
 {
     fn arbitrary(u: &mut Unstructured<'a>) -> Result<Self> {
         u.arbitrary_iter()?.take(Self::CAPACITY).collect()

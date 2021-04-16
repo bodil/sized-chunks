@@ -108,7 +108,6 @@
 pub mod inline_array;
 pub mod sized_chunk;
 pub mod sparse_chunk;
-pub mod types;
 
 #[cfg(test)]
 mod tests;

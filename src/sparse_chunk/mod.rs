@@ -17,13 +17,10 @@ use core::slice::{from_raw_parts, from_raw_parts_mut};
 #[cfg(feature = "std")]
 use std::collections::{BTreeMap, HashMap};
 
-use typenum::U64;
-
-use bitmaps::{Bitmap, Bits, Iter as BitmapIter};
-
-use crate::types::ChunkLength;
+use bitmaps::{Bitmap, Bits, BitsImpl, Iter as BitmapIter};
 
 mod iter;
+
 pub use self::iter::{Drain, Iter, IterMut, OptionDrain, OptionIter, OptionIterMut};
 
 #[cfg(feature = "refpool")]
@@ -31,27 +28,16 @@ mod refpool;
 
 /// A fixed capacity sparse array.
 ///
-/// An inline sparse array of up to `N` items of type `A`, where `N` is an
-/// [`Unsigned`][Unsigned] type level numeral. You can think of it as an array
+/// An inline sparse array of up to `N` items of type `A`. You can think of it as an array
 /// of `Option<A>`, where the discriminant (whether the value is `Some<A>` or
 /// `None`) is kept in a bitmap instead of adjacent to the value.
-///
-/// Because the bitmap is kept in a primitive type, the maximum value of `N` is
-/// currently 128, corresponding to a type of `u128`. The type of the bitmap
-/// will be the minimum unsigned integer type required to fit the number of bits
-/// required. Thus, disregarding memory alignment rules, the allocated size of a
-/// `SparseChunk` will be `uX` + `A` * `N` where `uX` is the type of the
-/// discriminant bitmap, either `u8`, `u16`, `u32`, `u64` or `u128`.
 ///
 /// # Examples
 ///
 /// ```rust
-/// # #[macro_use] extern crate sized_chunks;
-/// # extern crate typenum;
 /// # use sized_chunks::SparseChunk;
-/// # use typenum::U20;
 /// // Construct a chunk with a 20 item capacity
-/// let mut chunk = SparseChunk::<i32, U20>::new();
+/// let mut chunk = SparseChunk::<i32, 20>::new();
 /// // Set the 18th index to the value 5.
 /// chunk.insert(18, 5);
 /// // Set the 5th index to the value 23.
@@ -62,14 +48,18 @@ mod refpool;
 /// assert_eq!(chunk.get(6), None);
 /// assert_eq!(chunk.get(18), Some(&5));
 /// ```
-///
-/// [Unsigned]: https://docs.rs/typenum/1.10.0/typenum/marker_traits/trait.Unsigned.html
-pub struct SparseChunk<A, N: Bits + ChunkLength<A> = U64> {
+pub struct SparseChunk<A, const N: usize>
+where
+    BitsImpl<N>: Bits,
+{
     map: Bitmap<N>,
-    data: MaybeUninit<N::SizedType>,
+    data: MaybeUninit<[A; N]>,
 }
 
-impl<A, N: Bits + ChunkLength<A>> Drop for SparseChunk<A, N> {
+impl<A, const N: usize> Drop for SparseChunk<A, N>
+where
+    BitsImpl<N>: Bits,
+{
     fn drop(&mut self) {
         if mem::needs_drop::<A>() {
             let bits = self.map;
@@ -80,7 +70,10 @@ impl<A, N: Bits + ChunkLength<A>> Drop for SparseChunk<A, N> {
     }
 }
 
-impl<A: Clone, N: Bits + ChunkLength<A>> Clone for SparseChunk<A, N> {
+impl<A: Clone, const N: usize> Clone for SparseChunk<A, N>
+where
+    BitsImpl<N>: Bits,
+{
     fn clone(&self) -> Self {
         let mut out = Self::new();
         for index in &self.map {
@@ -90,21 +83,21 @@ impl<A: Clone, N: Bits + ChunkLength<A>> Clone for SparseChunk<A, N> {
     }
 }
 
-impl<A, N> SparseChunk<A, N>
+impl<A, const N: usize> SparseChunk<A, N>
 where
-    N: Bits + ChunkLength<A>,
+    BitsImpl<N>: Bits,
 {
     /// The maximum number of elements a `SparseChunk` can contain.
-    pub const CAPACITY: usize = N::USIZE;
+    pub const CAPACITY: usize = N;
 
     #[inline]
     fn values(&self) -> &[A] {
-        unsafe { from_raw_parts(&self.data as *const _ as *const A, N::USIZE) }
+        unsafe { from_raw_parts(&self.data as *const _ as *const A, N) }
     }
 
     #[inline]
     fn values_mut(&mut self) -> &mut [A] {
-        unsafe { from_raw_parts_mut(&mut self.data as *mut _ as *mut A, N::USIZE) }
+        unsafe { from_raw_parts_mut(&mut self.data as *mut _ as *mut A, N) }
     }
 
     /// Copy the value at an index, discarding ownership of the copied value
@@ -157,14 +150,14 @@ where
     /// Test if the chunk is at capacity.
     #[inline]
     pub fn is_full(&self) -> bool {
-        self.len() == N::USIZE
+        self.len() == N
     }
 
     /// Insert a new value at a given index.
     ///
     /// Returns the previous value at that index, if any.
     pub fn insert(&mut self, index: usize, value: A) -> Option<A> {
-        if index >= N::USIZE {
+        if index >= N {
             panic!("SparseChunk::insert: index out of bounds");
         }
         if self.map.set(index, true) {
@@ -179,7 +172,7 @@ where
     ///
     /// Returns the value, or `None` if the index had no value.
     pub fn remove(&mut self, index: usize) -> Option<A> {
-        if index >= N::USIZE {
+        if index >= N {
             panic!("SparseChunk::remove: index out of bounds");
         }
         if self.map.set(index, false) {
@@ -198,7 +191,7 @@ where
 
     /// Get the value at a given index.
     pub fn get(&self, index: usize) -> Option<&A> {
-        if index >= N::USIZE {
+        if index >= N {
             return None;
         }
         if self.map.get(index) {
@@ -210,7 +203,7 @@ where
 
     /// Get a mutable reference to the value at a given index.
     pub fn get_mut(&mut self, index: usize) -> Option<&mut A> {
-        if index >= N::USIZE {
+        if index >= N {
             return None;
         }
         if self.map.get(index) {
@@ -312,13 +305,19 @@ where
     }
 }
 
-impl<A, N: Bits + ChunkLength<A>> Default for SparseChunk<A, N> {
+impl<A, const N: usize> Default for SparseChunk<A, N>
+where
+    BitsImpl<N>: Bits,
+{
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<A, N: Bits + ChunkLength<A>> Index<usize> for SparseChunk<A, N> {
+impl<A, const N: usize> Index<usize> for SparseChunk<A, N>
+where
+    BitsImpl<N>: Bits,
+{
     type Output = A;
 
     #[inline]
@@ -327,14 +326,20 @@ impl<A, N: Bits + ChunkLength<A>> Index<usize> for SparseChunk<A, N> {
     }
 }
 
-impl<A, N: Bits + ChunkLength<A>> IndexMut<usize> for SparseChunk<A, N> {
+impl<A, const N: usize> IndexMut<usize> for SparseChunk<A, N>
+where
+    BitsImpl<N>: Bits,
+{
     #[inline]
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
         self.get_mut(index).unwrap()
     }
 }
 
-impl<A, N: Bits + ChunkLength<A>> IntoIterator for SparseChunk<A, N> {
+impl<A, const N: usize> IntoIterator for SparseChunk<A, N>
+where
+    BitsImpl<N>: Bits,
+{
     type Item = A;
     type IntoIter = Drain<A, N>;
 
@@ -344,7 +349,10 @@ impl<A, N: Bits + ChunkLength<A>> IntoIterator for SparseChunk<A, N> {
     }
 }
 
-impl<A, N: Bits + ChunkLength<A>> FromIterator<Option<A>> for SparseChunk<A, N> {
+impl<A, const N: usize> FromIterator<Option<A>> for SparseChunk<A, N>
+where
+    BitsImpl<N>: Bits,
+{
     fn from_iter<I>(iter: I) -> Self
     where
         I: IntoIterator<Item = Option<A>>,
@@ -359,10 +367,10 @@ impl<A, N: Bits + ChunkLength<A>> FromIterator<Option<A>> for SparseChunk<A, N> 
     }
 }
 
-impl<A, N> PartialEq for SparseChunk<A, N>
+impl<A, const N: usize> PartialEq for SparseChunk<A, N>
 where
     A: PartialEq,
-    N: Bits + ChunkLength<A>,
+    BitsImpl<N>: Bits,
 {
     fn eq(&self, other: &Self) -> bool {
         if self.map != other.map {
@@ -378,10 +386,10 @@ where
 }
 
 #[cfg(feature = "std")]
-impl<A, N> PartialEq<BTreeMap<usize, A>> for SparseChunk<A, N>
+impl<A, const N: usize> PartialEq<BTreeMap<usize, A>> for SparseChunk<A, N>
 where
     A: PartialEq,
-    N: Bits + ChunkLength<A>,
+    BitsImpl<N>: Bits,
 {
     fn eq(&self, other: &BTreeMap<usize, A>) -> bool {
         if self.len() != other.len() {
@@ -397,10 +405,10 @@ where
 }
 
 #[cfg(feature = "std")]
-impl<A, N> PartialEq<HashMap<usize, A>> for SparseChunk<A, N>
+impl<A, const N: usize> PartialEq<HashMap<usize, A>> for SparseChunk<A, N>
 where
     A: PartialEq,
-    N: Bits + ChunkLength<A>,
+    BitsImpl<N>: Bits,
 {
     fn eq(&self, other: &HashMap<usize, A>) -> bool {
         if self.len() != other.len() {
@@ -415,17 +423,17 @@ where
     }
 }
 
-impl<A, N> Eq for SparseChunk<A, N>
+impl<A, const N: usize> Eq for SparseChunk<A, N>
 where
     A: Eq,
-    N: Bits + ChunkLength<A>,
+    BitsImpl<N>: Bits,
 {
 }
 
-impl<A, N> Debug for SparseChunk<A, N>
+impl<A, const N: usize> Debug for SparseChunk<A, N>
 where
     A: Debug,
-    N: Bits + ChunkLength<A>,
+    BitsImpl<N>: Bits,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
         f.write_str("SparseChunk")?;
@@ -436,11 +444,10 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
-    use typenum::U32;
 
     #[test]
     fn insert_remove_iterate() {
-        let mut chunk: SparseChunk<_, U32> = SparseChunk::new();
+        let mut chunk: SparseChunk<_, 32> = SparseChunk::new();
         assert_eq!(None, chunk.insert(5, 5));
         assert_eq!(None, chunk.insert(1, 1));
         assert_eq!(None, chunk.insert(24, 42));
@@ -457,7 +464,7 @@ mod test {
 
     #[test]
     fn clone_chunk() {
-        let mut chunk: SparseChunk<_, U32> = SparseChunk::new();
+        let mut chunk: SparseChunk<_, 32> = SparseChunk::new();
         assert_eq!(None, chunk.insert(5, 5));
         assert_eq!(None, chunk.insert(1, 1));
         assert_eq!(None, chunk.insert(24, 42));
@@ -480,7 +487,7 @@ mod test {
     fn dropping() {
         let counter = AtomicUsize::new(0);
         {
-            let mut chunk: SparseChunk<DropTest<'_>> = SparseChunk::new();
+            let mut chunk: SparseChunk<DropTest<'_>, 64> = SparseChunk::new();
             for i in 0..40 {
                 chunk.insert(i, DropTest::new(&counter));
             }
@@ -495,7 +502,7 @@ mod test {
 
     #[test]
     fn equality() {
-        let mut c1 = SparseChunk::<usize>::new();
+        let mut c1 = SparseChunk::<usize, 64>::new();
         for i in 0..32 {
             c1.insert(i, i);
         }
