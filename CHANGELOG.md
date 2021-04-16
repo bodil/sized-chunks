@@ -5,17 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) and this project
 adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+-   When `InlineArray` cannot hold any values because of misalignment, report it as capacity 0
+    instead of panicking at runtime. (#22)
+
 ## [0.6.4] - 2021-02-17
 
 ### FIXED
 
--  `InlineArray` can be used in recursive types again.
+-   `InlineArray` can be used in recursive types again.
 
 ### CHANGED
 
--  `InlineArray::new()` now panics when it can't store elements with large alignment
-    (this was UB prior to 0.6.3). Alignments of `usize` and smaller are always supported.
-    Larger alignments are supported if the capacity-providing type has sufficient alignment.
+-   `InlineArray::new()` now panics when it can't store elements with large alignment (this was UB
+    prior to 0.6.3). Alignments of `usize` and smaller are always supported. Larger alignments are
+    supported if the capacity-providing type has sufficient alignment.
 
 ## [0.6.3] - 2021-02-14
 
