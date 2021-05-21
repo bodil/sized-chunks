@@ -17,11 +17,11 @@ enum Construct<A> {
     Empty,
     Single(A),
     Pair((A, A)),
-    DrainFrom(RingBuffer<A>),
-    CollectFrom(RingBuffer<A>, usize),
-    FromFront(RingBuffer<A>, usize),
-    FromBack(RingBuffer<A>, usize),
-    FromIter(RingBuffer<A>),
+    DrainFrom(RingBuffer<A, 64>),
+    CollectFrom(RingBuffer<A, 64>, usize),
+    FromFront(RingBuffer<A, 64>, usize),
+    FromBack(RingBuffer<A, 64>, usize),
+    FromIter(RingBuffer<A, 64>),
 }
 
 #[derive(Arbitrary, Debug)]
@@ -49,7 +49,7 @@ impl<A> Construct<A>
 where
     A: Arbitrary<'static> + Clone + Debug + Eq,
 {
-    fn make(self) -> RingBuffer<A> {
+    fn make(self) -> RingBuffer<A, 64> {
         match self {
             Construct::Empty => {
                 let out = RingBuffer::new();
@@ -121,7 +121,7 @@ where
 
 fuzz_target!(|input: (Construct<u32>, Vec<Action<u32>>)| {
     let (cons, actions) = input;
-    let capacity = RingBuffer::<u32>::CAPACITY;
+    let capacity = RingBuffer::<u32, 64>::CAPACITY;
     let mut chunk = cons.make();
     let mut guide: Vec<_> = chunk.iter().cloned().collect();
     for action in actions {

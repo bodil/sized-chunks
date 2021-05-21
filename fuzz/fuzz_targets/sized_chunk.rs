@@ -16,10 +16,10 @@ enum Construct<A> {
     Empty,
     Single(A),
     Pair((A, A)),
-    DrainFrom(Chunk<A>),
-    CollectFrom(Chunk<A>, usize),
-    FromFront(Chunk<A>, usize),
-    FromBack(Chunk<A>, usize),
+    DrainFrom(Chunk<A, 64>),
+    CollectFrom(Chunk<A, 64>, usize),
+    FromFront(Chunk<A, 64>, usize),
+    FromBack(Chunk<A, 64>, usize),
 }
 
 #[derive(Arbitrary, Debug)]
@@ -47,7 +47,7 @@ impl<A> Construct<A>
 where
     A: Arbitrary<'static> + Clone + Debug + Eq,
 {
-    fn make(self) -> Chunk<A> {
+    fn make(self) -> Chunk<A, 64> {
         match self {
             Construct::Empty => {
                 let out = Chunk::new();
@@ -114,7 +114,7 @@ where
 
 fuzz_target!(|input: (Construct<u32>, Vec<Action<u32>>)| {
     let (cons, actions) = input;
-    let capacity = Chunk::<u32>::CAPACITY;
+    let capacity = Chunk::<u32, 64>::CAPACITY;
     let mut chunk = cons.make();
     let mut guide: Vec<_> = chunk.iter().cloned().collect();
     for action in actions {
