@@ -1,4 +1,5 @@
 #![no_main]
+#![feature(is_sorted)]
 
 use std::fmt::Debug;
 use std::iter::FromIterator;
@@ -243,13 +244,15 @@ fuzz_target!(|input: (Construct<u32>, Vec<Action<u32>>)| {
                 }
             }
             Action::InsertOrdered(value) => {
-                if chunk.is_full() {
-                    assert_panic(|| chunk.insert_ordered(value));
-                } else {
-                    chunk.insert_ordered(value);
-                    match guide.binary_search(&value) {
-                        Ok(index) => guide.insert(index, value),
-                        Err(index) => guide.insert(index, value),
+                if chunk.iter().is_sorted() {
+                    if chunk.is_full() {
+                        assert_panic(|| chunk.insert_ordered(value));
+                    } else {
+                        chunk.insert_ordered(value);
+                        match guide.binary_search(&value) {
+                            Ok(index) => guide.insert(index, value),
+                            Err(index) => guide.insert(index, value),
+                        }
                     }
                 }
             }
