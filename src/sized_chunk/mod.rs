@@ -22,10 +22,6 @@ use core::slice::{
 #[cfg(feature = "std")]
 use std::io;
 
-use typenum::U64;
-
-use crate::types::ChunkLength;
-
 mod iter;
 pub use self::iter::{Drain, Iter};
 
@@ -35,8 +31,7 @@ mod refpool;
 /// A fixed capacity smart array.
 ///
 /// An inline array of items with a variable length but a fixed, preallocated
-/// capacity given by the `N` type, which must be an [`Unsigned`][Unsigned] type
-/// level numeral.
+/// capacity given by the `N` type.
 ///
 /// It's 'smart' because it's able to reorganise its contents based on expected
 /// behaviour. If you construct one using `push_back`, it will be laid out like
@@ -81,46 +76,35 @@ mod refpool;
 /// # Examples
 ///
 /// ```rust
-/// # #[macro_use] extern crate sized_chunks;
-/// # extern crate typenum;
 /// # use sized_chunks::Chunk;
-/// # use typenum::U64;
 /// // Construct a chunk with a 64 item capacity
-/// let mut chunk = Chunk::<i32, U64>::new();
+/// let mut chunk = Chunk::<i32, 64>::new();
 /// // Fill it with descending numbers
 /// chunk.extend((0..64).rev());
 /// // It derefs to a slice so we can use standard slice methods
 /// chunk.sort();
 /// // It's got all the amenities like `FromIterator` and `Eq`
-/// let expected: Chunk<i32, U64> = (0..64).collect();
+/// let expected: Chunk<i32, 64> = (0..64).collect();
 /// assert_eq!(expected, chunk);
 /// ```
 ///
-/// [Unsigned]: https://docs.rs/typenum/1.10.0/typenum/marker_traits/trait.Unsigned.html
 /// [im::Vector]: https://docs.rs/im/latest/im/vector/enum.Vector.html
 /// [RingBuffer]: ../ring_buffer/struct.RingBuffer.html
-pub struct Chunk<A, N = U64>
-where
-    N: ChunkLength<A>,
-{
+pub struct Chunk<A, const N: usize> {
     left: usize,
     right: usize,
-    data: MaybeUninit<N::SizedType>,
+    data: MaybeUninit<[A; N]>,
 }
 
-impl<A, N> Drop for Chunk<A, N>
-where
-    N: ChunkLength<A>,
-{
+impl<A, const N: usize> Drop for Chunk<A, N> {
     fn drop(&mut self) {
         unsafe { ptr::drop_in_place(self.as_mut_slice()) }
     }
 }
 
-impl<A, N> Clone for Chunk<A, N>
+impl<A, const N: usize> Clone for Chunk<A, N>
 where
     A: Clone,
-    N: ChunkLength<A>,
 {
     fn clone(&self) -> Self {
         let mut out = Self::new();
@@ -137,12 +121,9 @@ where
     }
 }
 
-impl<A, N> Chunk<A, N>
-where
-    N: ChunkLength<A>,
-{
+impl<A, const N: usize> Chunk<A, N> {
     /// The maximum number of elements this `Chunk` can contain.
-    pub const CAPACITY: usize = N::USIZE;
+    pub const CAPACITY: usize = N;
 
     /// Construct a new empty chunk.
     pub fn new() -> Self {
@@ -357,12 +338,12 @@ where
             panic!("Chunk::push_front: can't push to full chunk");
         }
         if self.is_empty() {
-            self.left = N::USIZE;
-            self.right = N::USIZE;
+            self.left = N;
+            self.right = N;
         } else if self.left == 0 {
-            self.left = N::USIZE - self.right;
+            self.left = N - self.right;
             unsafe { Chunk::force_copy(0, self.left, self.right, self) };
-            self.right = N::USIZE;
+            self.right = N;
         }
         self.left -= 1;
         unsafe { Chunk::force_write(self.left, value, self) }
@@ -380,9 +361,9 @@ where
         if self.is_empty() {
             self.left = 0;
             self.right = 0;
-        } else if self.right == N::USIZE {
+        } else if self.right == N {
             unsafe { Chunk::force_copy(self.left, 0, self.len(), self) };
-            self.right = N::USIZE - self.left;
+            self.right = N - self.left;
             self.left = 0;
         }
         unsafe { Chunk::force_write(self.right, value, self) }
@@ -473,10 +454,10 @@ where
     pub fn append(&mut self, other: &mut Self) {
         let self_len = self.len();
         let other_len = other.len();
-        if self_len + other_len > N::USIZE {
+        if self_len + other_len > N {
             panic!("Chunk::append: chunk size overflow");
         }
-        if self.right + other_len > N::USIZE {
+        if self.right + other_len > N {
             unsafe { Chunk::force_copy(self.left, 0, self_len, self) };
             self.right -= self.left;
             self.left = 0;
@@ -497,9 +478,9 @@ where
     pub fn drain_from_front(&mut self, other: &mut Self, count: usize) {
         let self_len = self.len();
         let other_len = other.len();
-        assert!(self_len + count <= N::USIZE);
+        assert!(self_len + count <= N);
         assert!(other_len >= count);
-        if self.right + count > N::USIZE {
+        if self.right + count > N {
             unsafe { Chunk::force_copy(self.left, 0, self_len, self) };
             self.right -= self.left;
             self.left = 0;
@@ -519,12 +500,12 @@ where
     pub fn drain_from_back(&mut self, other: &mut Self, count: usize) {
         let self_len = self.len();
         let other_len = other.len();
-        assert!(self_len + count <= N::USIZE);
+        assert!(self_len + count <= N);
         assert!(other_len >= count);
         if self.left < count {
-            unsafe { Chunk::force_copy(self.left, N::USIZE - self_len, self_len, self) };
-            self.left = N::USIZE - self_len;
-            self.right = N::USIZE;
+            unsafe { Chunk::force_copy(self.left, N - self_len, self_len, self) };
+            self.left = N - self_len;
+            self.right = N;
         }
         unsafe { Chunk::force_copy_to(other.right - count, self.left - count, count, other, self) };
         self.left -= count;
@@ -556,7 +537,7 @@ where
         let real_index = index + self.left;
         let left_size = index;
         let right_size = self.right - real_index;
-        if self.right == N::USIZE || (self.left > 0 && left_size < right_size) {
+        if self.right == N || (self.left > 0 && left_size < right_size) {
             unsafe {
                 Chunk::force_copy(self.left, self.left - 1, left_size, self);
                 Chunk::force_write(real_index - 1, value, self);
@@ -585,8 +566,7 @@ where
     /// ```rust
     /// # use std::iter::FromIterator;
     /// # use sized_chunks::Chunk;
-    /// # use typenum::U64;
-    /// let mut chunk = Chunk::<i32, U64>::from_iter(0..5);
+    /// let mut chunk = Chunk::<i32, 64>::from_iter(0..5);
     /// chunk.insert_ordered(3);
     /// assert_eq!(&[0, 1, 2, 3, 3, 4], chunk.as_slice());
     /// ```
@@ -631,7 +611,7 @@ where
         let real_index = index + self.left;
         let left_size = index;
         let right_size = self.right - real_index;
-        if self.right == N::USIZE || (self.left >= insert_size && left_size < right_size) {
+        if self.right == N || (self.left >= insert_size && left_size < right_size) {
             unsafe {
                 Chunk::force_copy(self.left, self.left - insert_size, left_size, self);
                 let write_index = real_index - insert_size;
@@ -702,7 +682,7 @@ where
     pub fn as_slice(&self) -> &[A] {
         unsafe {
             from_raw_parts(
-                (&self.data as *const MaybeUninit<N::SizedType> as *const A).add(self.left),
+                (&self.data as *const MaybeUninit<[A; N]> as *const A).add(self.left),
                 self.len(),
             )
         }
@@ -712,26 +692,22 @@ where
     pub fn as_mut_slice(&mut self) -> &mut [A] {
         unsafe {
             from_raw_parts_mut(
-                (&mut self.data as *mut MaybeUninit<N::SizedType> as *mut A).add(self.left),
+                (&mut self.data as *mut MaybeUninit<[A; N]> as *mut A).add(self.left),
                 self.len(),
             )
         }
     }
 }
 
-impl<A, N> Default for Chunk<A, N>
-where
-    N: ChunkLength<A>,
-{
+impl<A, const N: usize> Default for Chunk<A, N> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<A, N, I> Index<I> for Chunk<A, N>
+impl<A, I, const N: usize> Index<I> for Chunk<A, N>
 where
     I: SliceIndex<[A]>,
-    N: ChunkLength<A>,
 {
     type Output = I::Output;
     fn index(&self, index: I) -> &Self::Output {
@@ -739,20 +715,18 @@ where
     }
 }
 
-impl<A, N, I> IndexMut<I> for Chunk<A, N>
+impl<A, I, const N: usize> IndexMut<I> for Chunk<A, N>
 where
     I: SliceIndex<[A]>,
-    N: ChunkLength<A>,
 {
     fn index_mut(&mut self, index: I) -> &mut Self::Output {
         self.as_mut_slice().index_mut(index)
     }
 }
 
-impl<A, N> Debug for Chunk<A, N>
+impl<A, const N: usize> Debug for Chunk<A, N>
 where
     A: Debug,
-    N: ChunkLength<A>,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
         f.write_str("Chunk")?;
@@ -760,10 +734,9 @@ where
     }
 }
 
-impl<A, N> Hash for Chunk<A, N>
+impl<A, const N: usize> Hash for Chunk<A, N>
 where
     A: Hash,
-    N: ChunkLength<A>,
 {
     fn hash<H>(&self, hasher: &mut H)
     where
@@ -775,38 +748,30 @@ where
     }
 }
 
-impl<A, N, Slice> PartialEq<Slice> for Chunk<A, N>
+impl<A, Slice, const N: usize> PartialEq<Slice> for Chunk<A, N>
 where
     Slice: Borrow<[A]>,
     A: PartialEq,
-    N: ChunkLength<A>,
 {
     fn eq(&self, other: &Slice) -> bool {
         self.as_slice() == other.borrow()
     }
 }
 
-impl<A, N> Eq for Chunk<A, N>
-where
-    A: Eq,
-    N: ChunkLength<A>,
-{
-}
+impl<A, const N: usize> Eq for Chunk<A, N> where A: Eq {}
 
-impl<A, N> PartialOrd for Chunk<A, N>
+impl<A, const N: usize> PartialOrd for Chunk<A, N>
 where
     A: PartialOrd,
-    N: ChunkLength<A>,
 {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         self.iter().partial_cmp(other.iter())
     }
 }
 
-impl<A, N> Ord for Chunk<A, N>
+impl<A, const N: usize> Ord for Chunk<A, N>
 where
     A: Ord,
-    N: ChunkLength<A>,
 {
     fn cmp(&self, other: &Self) -> Ordering {
         self.iter().cmp(other.iter())
@@ -814,13 +779,10 @@ where
 }
 
 #[cfg(feature = "std")]
-impl<N> io::Write for Chunk<u8, N>
-where
-    N: ChunkLength<u8>,
-{
+impl<const N: usize> io::Write for Chunk<u8, N> {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         let old_len = self.len();
-        self.extend(buf.iter().cloned().take(N::USIZE - old_len));
+        self.extend(buf.iter().cloned().take(N - old_len));
         Ok(self.len() - old_len)
     }
 
@@ -830,7 +792,7 @@ where
 }
 
 #[cfg(feature = "std")]
-impl<N: ChunkLength<u8>> std::io::Read for Chunk<u8, N> {
+impl<const N: usize> std::io::Read for Chunk<u8, N> {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
         let read_size = buf.len().min(self.len());
         if read_size == 0 {
@@ -844,20 +806,14 @@ impl<N: ChunkLength<u8>> std::io::Read for Chunk<u8, N> {
     }
 }
 
-impl<A, N, T> From<InlineArray<A, T>> for Chunk<A, N>
-where
-    N: ChunkLength<A>,
-{
+impl<A, T, const N: usize> From<InlineArray<A, T>> for Chunk<A, N> {
     #[inline]
     fn from(mut array: InlineArray<A, T>) -> Self {
         Self::from(&mut array)
     }
 }
 
-impl<'a, A, N, T> From<&'a mut InlineArray<A, T>> for Chunk<A, N>
-where
-    N: ChunkLength<A>,
-{
+impl<'a, A, T, const N: usize> From<&'a mut InlineArray<A, T>> for Chunk<A, N> {
     fn from(array: &mut InlineArray<A, T>) -> Self {
         // The first capacity comparison is to help optimize it out
         assert!(
@@ -875,46 +831,31 @@ where
     }
 }
 
-impl<A, N> Borrow<[A]> for Chunk<A, N>
-where
-    N: ChunkLength<A>,
-{
+impl<A, const N: usize> Borrow<[A]> for Chunk<A, N> {
     fn borrow(&self) -> &[A] {
         self.as_slice()
     }
 }
 
-impl<A, N> BorrowMut<[A]> for Chunk<A, N>
-where
-    N: ChunkLength<A>,
-{
+impl<A, const N: usize> BorrowMut<[A]> for Chunk<A, N> {
     fn borrow_mut(&mut self) -> &mut [A] {
         self.as_mut_slice()
     }
 }
 
-impl<A, N> AsRef<[A]> for Chunk<A, N>
-where
-    N: ChunkLength<A>,
-{
+impl<A, const N: usize> AsRef<[A]> for Chunk<A, N> {
     fn as_ref(&self) -> &[A] {
         self.as_slice()
     }
 }
 
-impl<A, N> AsMut<[A]> for Chunk<A, N>
-where
-    N: ChunkLength<A>,
-{
+impl<A, const N: usize> AsMut<[A]> for Chunk<A, N> {
     fn as_mut(&mut self) -> &mut [A] {
         self.as_mut_slice()
     }
 }
 
-impl<A, N> Deref for Chunk<A, N>
-where
-    N: ChunkLength<A>,
-{
+impl<A, const N: usize> Deref for Chunk<A, N> {
     type Target = [A];
 
     fn deref(&self) -> &Self::Target {
@@ -922,19 +863,13 @@ where
     }
 }
 
-impl<A, N> DerefMut for Chunk<A, N>
-where
-    N: ChunkLength<A>,
-{
+impl<A, const N: usize> DerefMut for Chunk<A, N> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.as_mut_slice()
     }
 }
 
-impl<A, N> FromIterator<A> for Chunk<A, N>
-where
-    N: ChunkLength<A>,
-{
+impl<A, const N: usize> FromIterator<A> for Chunk<A, N> {
     fn from_iter<I>(it: I) -> Self
     where
         I: IntoIterator<Item = A>,
@@ -947,10 +882,7 @@ where
     }
 }
 
-impl<'a, A, N> IntoIterator for &'a Chunk<A, N>
-where
-    N: ChunkLength<A>,
-{
+impl<'a, A, const N: usize> IntoIterator for &'a Chunk<A, N> {
     type Item = &'a A;
     type IntoIter = SliceIter<'a, A>;
     fn into_iter(self) -> Self::IntoIter {
@@ -958,10 +890,7 @@ where
     }
 }
 
-impl<'a, A, N> IntoIterator for &'a mut Chunk<A, N>
-where
-    N: ChunkLength<A>,
-{
+impl<'a, A, const N: usize> IntoIterator for &'a mut Chunk<A, N> {
     type Item = &'a mut A;
     type IntoIter = SliceIterMut<'a, A>;
     fn into_iter(self) -> Self::IntoIter {
@@ -969,10 +898,7 @@ where
     }
 }
 
-impl<A, N> Extend<A> for Chunk<A, N>
-where
-    N: ChunkLength<A>,
-{
+impl<A, const N: usize> Extend<A> for Chunk<A, N> {
     /// Append the contents of the iterator to the back of the chunk.
     ///
     /// Panics if the chunk exceeds its capacity.
@@ -988,10 +914,9 @@ where
     }
 }
 
-impl<'a, A, N> Extend<&'a A> for Chunk<A, N>
+impl<'a, A, const N: usize> Extend<&'a A> for Chunk<A, N>
 where
     A: 'a + Copy,
-    N: ChunkLength<A>,
 {
     /// Append the contents of the iterator to the back of the chunk.
     ///
@@ -1008,10 +933,7 @@ where
     }
 }
 
-impl<A, N> IntoIterator for Chunk<A, N>
-where
-    N: ChunkLength<A>,
-{
+impl<A, const N: usize> IntoIterator for Chunk<A, N> {
     type Item = A;
     type IntoIter = Iter<A, N>;
 
@@ -1024,12 +946,11 @@ where
 #[rustfmt::skip]
 mod test {
     use super::*;
-    use typenum::{U0, U1, U2, U3, U5};
 
     #[test]
     #[should_panic(expected = "Chunk::push_back: can't push to full chunk")]
     fn issue_11_testcase1d() {
-        let mut chunk = Chunk::<usize, U2>::pair(123, 456);
+        let mut chunk = Chunk::<usize, 2>::pair(123, 456);
         chunk.push_back(789);
     }
 
@@ -1039,7 +960,7 @@ mod test {
         let mut from = InlineArray::<u8, [u8; 256]>::new();
         from.push(1);
 
-        let _ = Chunk::<u8, U0>::from(from);
+        let _ = Chunk::<u8, 0>::from(from);
     }
 
     #[test]
@@ -1047,7 +968,7 @@ mod test {
         let mut from = InlineArray::<u8, [u8; 256]>::new();
         from.push(1);
 
-        let _ = Chunk::<u8, U1>::from(from);
+        let _ = Chunk::<u8, 1>::from(from);
     }
 
     struct DropDetector(u32);
@@ -1076,7 +997,7 @@ mod test {
     /// This is for miri to catch
     #[test]
     fn issue_11_testcase3a() {
-        let mut chunk = Chunk::<DropDetector, U3>::new();
+        let mut chunk = Chunk::<DropDetector, 3>::new();
         chunk.push_back(DropDetector::new(42));
         chunk.push_back(DropDetector::new(42));
         chunk.push_back(DropDetector::new(43));
@@ -1117,7 +1038,7 @@ mod test {
     #[test]
     fn issue_11_testcase3b() {
         let _ = std::panic::catch_unwind(|| {
-            let mut chunk = Chunk::<DropDetector, U5>::new();
+            let mut chunk = Chunk::<DropDetector, 5>::new();
             chunk.push_back(DropDetector::new(1));
             chunk.push_back(DropDetector::new(2));
             chunk.push_back(DropDetector::new(3));
@@ -1158,24 +1079,24 @@ mod test {
 
     #[test]
     fn iterator_too_long() {
-        let mut chunk = Chunk::<u8, U5>::new();
+        let mut chunk = Chunk::<u8, 5>::new();
         chunk.push_back(0);
         chunk.push_back(1);
         chunk.push_back(2);
         chunk.insert_from(1, FakeSizeIterator { reported: 1, actual: 10 });
 
-        let mut chunk = Chunk::<u8, U5>::new();
+        let mut chunk = Chunk::<u8, 5>::new();
         chunk.push_back(1);
         chunk.insert_from(0, FakeSizeIterator { reported: 1, actual: 10 });
 
-        let mut chunk = Chunk::<u8, U5>::new();
+        let mut chunk = Chunk::<u8, 5>::new();
         chunk.insert_from(0, FakeSizeIterator { reported: 1, actual: 10 });
     }
 
     #[test]
     #[should_panic(expected = "ExactSizeIterator yielded fewer values than advertised")]
     fn iterator_too_short1() {
-        let mut chunk = Chunk::<u8, U5>::new();
+        let mut chunk = Chunk::<u8, 5>::new();
         chunk.push_back(0);
         chunk.push_back(1);
         chunk.push_back(2);
@@ -1185,14 +1106,14 @@ mod test {
     #[test]
     #[should_panic(expected = "ExactSizeIterator yielded fewer values than advertised")]
     fn iterator_too_short2() {
-        let mut chunk = Chunk::<u8, U5>::new();
+        let mut chunk = Chunk::<u8, 5>::new();
         chunk.push_back(1);
         chunk.insert_from(1, FakeSizeIterator { reported: 4, actual: 2 });
     }
 
     #[test]
     fn is_full() {
-        let mut chunk = Chunk::<_, U64>::new();
+        let mut chunk = Chunk::<_, 64>::new();
         for i in 0..64 {
             assert_eq!(false, chunk.is_full());
             chunk.push_back(i);
@@ -1202,7 +1123,7 @@ mod test {
 
     #[test]
     fn push_back_front() {
-        let mut chunk = Chunk::<_, U64>::new();
+        let mut chunk = Chunk::<_, 64>::new();
         for i in 12..20 {
             chunk.push_back(i);
         }
@@ -1222,7 +1143,7 @@ mod test {
 
     #[test]
     fn push_and_pop() {
-        let mut chunk = Chunk::<_, U64>::new();
+        let mut chunk = Chunk::<_, 64>::new();
         for i in 0..64 {
             chunk.push_back(i);
         }
@@ -1239,7 +1160,7 @@ mod test {
 
     #[test]
     fn drop_left() {
-        let mut chunk = Chunk::<_, U64>::new();
+        let mut chunk = Chunk::<_, 64>::new();
         for i in 0..6 {
             chunk.push_back(i);
         }
@@ -1250,7 +1171,7 @@ mod test {
 
     #[test]
     fn drop_right() {
-        let mut chunk = Chunk::<_, U64>::new();
+        let mut chunk = Chunk::<_, 64>::new();
         for i in 0..6 {
             chunk.push_back(i);
         }
@@ -1261,7 +1182,7 @@ mod test {
 
     #[test]
     fn split_off() {
-        let mut left = Chunk::<_, U64>::new();
+        let mut left = Chunk::<_, 64>::new();
         for i in 0..6 {
             left.push_back(i);
         }
@@ -1274,11 +1195,11 @@ mod test {
 
     #[test]
     fn append() {
-        let mut left = Chunk::<_, U64>::new();
+        let mut left = Chunk::<_, 64>::new();
         for i in 0..32 {
             left.push_back(i);
         }
-        let mut right = Chunk::<_, U64>::new();
+        let mut right = Chunk::<_, 64>::new();
         for i in (32..64).rev() {
             right.push_front(i);
         }
@@ -1290,7 +1211,7 @@ mod test {
 
     #[test]
     fn ref_iter() {
-        let mut chunk = Chunk::<_, U64>::new();
+        let mut chunk = Chunk::<_, 64>::new();
         for i in 0..64 {
             chunk.push_back(i);
         }
@@ -1302,7 +1223,7 @@ mod test {
 
     #[test]
     fn mut_ref_iter() {
-        let mut chunk = Chunk::<_, U64>::new();
+        let mut chunk = Chunk::<_, 64>::new();
         for i in 0..64 {
             chunk.push_back(i);
         }
@@ -1314,7 +1235,7 @@ mod test {
 
     #[test]
     fn consuming_iter() {
-        let mut chunk = Chunk::<_, U64>::new();
+        let mut chunk = Chunk::<_, 64>::new();
         for i in 0..64 {
             chunk.push_back(i);
         }
@@ -1325,7 +1246,7 @@ mod test {
 
     #[test]
     fn insert_middle() {
-        let mut chunk = Chunk::<_, U64>::new();
+        let mut chunk = Chunk::<_, 64>::new();
         for i in 0..32 {
             chunk.push_back(i);
         }
@@ -1340,7 +1261,7 @@ mod test {
 
     #[test]
     fn insert_back() {
-        let mut chunk = Chunk::<_, U64>::new();
+        let mut chunk = Chunk::<_, 64>::new();
         for i in 0..63 {
             chunk.push_back(i);
         }
@@ -1352,7 +1273,7 @@ mod test {
 
     #[test]
     fn insert_front() {
-        let mut chunk = Chunk::<_, U64>::new();
+        let mut chunk = Chunk::<_, 64>::new();
         for i in 1..64 {
             chunk.push_front(64 - i);
         }
@@ -1364,7 +1285,7 @@ mod test {
 
     #[test]
     fn remove_value() {
-        let mut chunk = Chunk::<_, U64>::new();
+        let mut chunk = Chunk::<_, 64>::new();
         for i in 0..64 {
             chunk.push_back(i);
         }
@@ -1381,7 +1302,7 @@ mod test {
     fn dropping() {
         let counter = AtomicUsize::new(0);
         {
-            let mut chunk: Chunk<DropTest<'_>> = Chunk::new();
+            let mut chunk: Chunk<DropTest<'_>, 64> = Chunk::new();
             for _i in 0..20 {
                 chunk.push_back(DropTest::new(&counter))
             }
@@ -1400,12 +1321,12 @@ mod test {
     #[test]
     #[should_panic(expected = "assertion failed: Self::CAPACITY >= 1")]
     fn unit_on_empty() {
-        Chunk::<usize, U0>::unit(1);
+        Chunk::<usize, 0>::unit(1);
     }
 
     #[test]
     #[should_panic(expected = "assertion failed: Self::CAPACITY >= 2")]
     fn pair_on_empty() {
-        Chunk::<usize, U0>::pair(1, 2);
+        Chunk::<usize, 0>::pair(1, 2);
     }
 }

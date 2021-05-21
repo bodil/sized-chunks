@@ -5,26 +5,18 @@
 use core::iter::FusedIterator;
 use core::marker::PhantomData;
 
-use crate::types::ChunkLength;
-
 use super::{index::RawIndex, RingBuffer};
 use array_ops::HasLength;
 
 /// A reference iterator over a `RingBuffer`.
-pub struct Iter<'a, A, N>
-where
-    N: ChunkLength<A>,
-{
+pub struct Iter<'a, A, const N: usize> {
     pub(crate) buffer: &'a RingBuffer<A, N>,
     pub(crate) left_index: RawIndex<N>,
     pub(crate) right_index: RawIndex<N>,
     pub(crate) remaining: usize,
 }
 
-impl<'a, A, N> Iterator for Iter<'a, A, N>
-where
-    N: ChunkLength<A>,
-{
+impl<'a, A, const N: usize> Iterator for Iter<'a, A, N> {
     type Item = &'a A;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -43,10 +35,7 @@ where
     }
 }
 
-impl<'a, A, N> DoubleEndedIterator for Iter<'a, A, N>
-where
-    N: ChunkLength<A>,
-{
+impl<'a, A, const N: usize> DoubleEndedIterator for Iter<'a, A, N> {
     fn next_back(&mut self) -> Option<Self::Item> {
         if self.remaining == 0 {
             None
@@ -57,15 +46,12 @@ where
     }
 }
 
-impl<'a, A, N> ExactSizeIterator for Iter<'a, A, N> where N: ChunkLength<A> {}
+impl<'a, A, const N: usize> ExactSizeIterator for Iter<'a, A, N> {}
 
-impl<'a, A, N> FusedIterator for Iter<'a, A, N> where N: ChunkLength<A> {}
+impl<'a, A, const N: usize> FusedIterator for Iter<'a, A, N> {}
 
 /// A mutable reference iterator over a `RingBuffer`.
-pub struct IterMut<'a, A, N>
-where
-    N: ChunkLength<A>,
-{
+pub struct IterMut<'a, A, const N: usize> {
     data: *mut A,
     left_index: RawIndex<N>,
     right_index: RawIndex<N>,
@@ -73,9 +59,8 @@ where
     phantom: PhantomData<&'a ()>,
 }
 
-impl<'a, A, N> IterMut<'a, A, N>
+impl<'a, A, const N: usize> IterMut<'a, A, N>
 where
-    N: ChunkLength<A>,
     A: 'a,
 {
     pub(crate) fn new(buffer: &mut RingBuffer<A, N>) -> Self {
@@ -101,9 +86,8 @@ where
     }
 }
 
-impl<'a, A, N> Iterator for IterMut<'a, A, N>
+impl<'a, A, const N: usize> Iterator for IterMut<'a, A, N>
 where
-    N: ChunkLength<A>,
     A: 'a,
 {
     type Item = &'a mut A;
@@ -125,9 +109,8 @@ where
     }
 }
 
-impl<'a, A, N> DoubleEndedIterator for IterMut<'a, A, N>
+impl<'a, A, const N: usize> DoubleEndedIterator for IterMut<'a, A, N>
 where
-    N: ChunkLength<A>,
     A: 'a,
 {
     fn next_back(&mut self) -> Option<Self::Item> {
@@ -141,26 +124,16 @@ where
     }
 }
 
-impl<'a, A, N> ExactSizeIterator for IterMut<'a, A, N>
-where
-    N: ChunkLength<A>,
-    A: 'a,
-{
-}
+impl<'a, A, const N: usize> ExactSizeIterator for IterMut<'a, A, N> where A: 'a {}
 
-impl<'a, A, N> FusedIterator for IterMut<'a, A, N>
-where
-    N: ChunkLength<A>,
-    A: 'a,
-{
-}
+impl<'a, A, const N: usize> FusedIterator for IterMut<'a, A, N> where A: 'a {}
 
 /// A draining iterator over a `RingBuffer`.
-pub struct Drain<'a, A, N: ChunkLength<A>> {
+pub struct Drain<'a, A, const N: usize> {
     pub(crate) buffer: &'a mut RingBuffer<A, N>,
 }
 
-impl<'a, A: 'a, N: ChunkLength<A> + 'a> Iterator for Drain<'a, A, N> {
+impl<'a, A: 'a, const N: usize> Iterator for Drain<'a, A, N> {
     type Item = A;
 
     #[inline]
@@ -175,23 +148,23 @@ impl<'a, A: 'a, N: ChunkLength<A> + 'a> Iterator for Drain<'a, A, N> {
     }
 }
 
-impl<'a, A: 'a, N: ChunkLength<A> + 'a> DoubleEndedIterator for Drain<'a, A, N> {
+impl<'a, A: 'a, const N: usize> DoubleEndedIterator for Drain<'a, A, N> {
     #[inline]
     fn next_back(&mut self) -> Option<Self::Item> {
         self.buffer.pop_back()
     }
 }
 
-impl<'a, A: 'a, N: ChunkLength<A> + 'a> ExactSizeIterator for Drain<'a, A, N> {}
+impl<'a, A: 'a, const N: usize> ExactSizeIterator for Drain<'a, A, N> {}
 
-impl<'a, A: 'a, N: ChunkLength<A> + 'a> FusedIterator for Drain<'a, A, N> {}
+impl<'a, A: 'a, const N: usize> FusedIterator for Drain<'a, A, N> {}
 
 /// A consuming iterator over a `RingBuffer`.
-pub struct OwnedIter<A, N: ChunkLength<A>> {
+pub struct OwnedIter<A, const N: usize> {
     pub(crate) buffer: RingBuffer<A, N>,
 }
 
-impl<A, N: ChunkLength<A>> Iterator for OwnedIter<A, N> {
+impl<A, const N: usize> Iterator for OwnedIter<A, N> {
     type Item = A;
 
     #[inline]
@@ -206,13 +179,13 @@ impl<A, N: ChunkLength<A>> Iterator for OwnedIter<A, N> {
     }
 }
 
-impl<A, N: ChunkLength<A>> DoubleEndedIterator for OwnedIter<A, N> {
+impl<A, const N: usize> DoubleEndedIterator for OwnedIter<A, N> {
     #[inline]
     fn next_back(&mut self) -> Option<Self::Item> {
         self.buffer.pop_back()
     }
 }
 
-impl<A, N: ChunkLength<A>> ExactSizeIterator for OwnedIter<A, N> {}
+impl<A, const N: usize> ExactSizeIterator for OwnedIter<A, N> {}
 
-impl<A, N: ChunkLength<A>> FusedIterator for OwnedIter<A, N> {}
+impl<A, const N: usize> FusedIterator for OwnedIter<A, N> {}

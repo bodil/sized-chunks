@@ -1,20 +1,13 @@
 use core::iter::FusedIterator;
 
 use super::Chunk;
-use crate::types::ChunkLength;
 
 /// A consuming iterator over the elements of a `Chunk`.
-pub struct Iter<A, N>
-where
-    N: ChunkLength<A>,
-{
+pub struct Iter<A, const N: usize> {
     pub(crate) chunk: Chunk<A, N>,
 }
 
-impl<A, N> Iterator for Iter<A, N>
-where
-    N: ChunkLength<A>,
-{
+impl<A, const N: usize> Iterator for Iter<A, N> {
     type Item = A;
     fn next(&mut self) -> Option<Self::Item> {
         if self.chunk.is_empty() {
@@ -29,10 +22,7 @@ where
     }
 }
 
-impl<A, N> DoubleEndedIterator for Iter<A, N>
-where
-    N: ChunkLength<A>,
-{
+impl<A, const N: usize> DoubleEndedIterator for Iter<A, N> {
     fn next_back(&mut self) -> Option<Self::Item> {
         if self.chunk.is_empty() {
             None
@@ -42,9 +32,9 @@ where
     }
 }
 
-impl<A, N> ExactSizeIterator for Iter<A, N> where N: ChunkLength<A> {}
+impl<A, const N: usize> ExactSizeIterator for Iter<A, N> {}
 
-impl<A, N> FusedIterator for Iter<A, N> where N: ChunkLength<A> {}
+impl<A, const N: usize> FusedIterator for Iter<A, N> {}
 
 /// A draining iterator over the elements of a `Chunk`.
 ///
@@ -53,17 +43,13 @@ impl<A, N> FusedIterator for Iter<A, N> where N: ChunkLength<A> {}
 /// different from the consuming iterator `Iter` in that `Iter` will take
 /// ownership of the `Chunk` and discard it when you're done iterating, while
 /// `Drain` leaves you still owning the drained `Chunk`.
-pub struct Drain<'a, A, N>
-where
-    N: ChunkLength<A>,
-{
+pub struct Drain<'a, A, const N: usize> {
     pub(crate) chunk: &'a mut Chunk<A, N>,
 }
 
-impl<'a, A, N> Iterator for Drain<'a, A, N>
+impl<'a, A, const N: usize> Iterator for Drain<'a, A, N>
 where
     A: 'a,
-    N: ChunkLength<A> + 'a,
 {
     type Item = A;
 
@@ -80,10 +66,9 @@ where
     }
 }
 
-impl<'a, A, N> DoubleEndedIterator for Drain<'a, A, N>
+impl<'a, A, const N: usize> DoubleEndedIterator for Drain<'a, A, N>
 where
     A: 'a,
-    N: ChunkLength<A> + 'a,
 {
     fn next_back(&mut self) -> Option<Self::Item> {
         if self.chunk.is_empty() {
@@ -94,16 +79,6 @@ where
     }
 }
 
-impl<'a, A, N> ExactSizeIterator for Drain<'a, A, N>
-where
-    A: 'a,
-    N: ChunkLength<A> + 'a,
-{
-}
+impl<'a, A, const N: usize> ExactSizeIterator for Drain<'a, A, N> where A: 'a {}
 
-impl<'a, A, N> FusedIterator for Drain<'a, A, N>
-where
-    A: 'a,
-    N: ChunkLength<A> + 'a,
-{
-}
+impl<'a, A, const N: usize> FusedIterator for Drain<'a, A, N> where A: 'a {}

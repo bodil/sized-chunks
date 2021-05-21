@@ -15,11 +15,7 @@ use core::mem::{replace, MaybeUninit};
 use core::ops::{Bound, Range, RangeBounds};
 use core::ops::{Index, IndexMut};
 
-use typenum::U64;
-
 pub use array_ops::{Array, ArrayMut, HasLength};
-
-use crate::types::ChunkLength;
 
 mod index;
 use index::{IndexIter, RawIndex};
@@ -61,16 +57,13 @@ mod refpool;
 /// [Chunk]: ../sized_chunk/struct.Chunk.html
 /// [Slice]: struct.Slice.html
 /// [SliceMut]: struct.SliceMut.html
-pub struct RingBuffer<A, N = U64>
-where
-    N: ChunkLength<A>,
-{
+pub struct RingBuffer<A, const N: usize> {
     origin: RawIndex<N>,
     length: usize,
-    data: MaybeUninit<N::SizedType>,
+    data: MaybeUninit<[A; N]>,
 }
 
-impl<A, N: ChunkLength<A>> Drop for RingBuffer<A, N> {
+impl<A, const N: usize> Drop for RingBuffer<A, N> {
     #[inline]
     fn drop(&mut self) {
         if core::mem::needs_drop::<A>() {
@@ -81,10 +74,7 @@ impl<A, N: ChunkLength<A>> Drop for RingBuffer<A, N> {
     }
 }
 
-impl<A, N> HasLength for RingBuffer<A, N>
-where
-    N: ChunkLength<A>,
-{
+impl<A, const N: usize> HasLength for RingBuffer<A, N> {
     /// Get the length of the ring buffer.
     #[inline]
     #[must_use]
@@ -93,10 +83,7 @@ where
     }
 }
 
-impl<A, N> Array for RingBuffer<A, N>
-where
-    N: ChunkLength<A>,
-{
+impl<A, const N: usize> Array for RingBuffer<A, N> {
     /// Get a reference to the value at a given index.
     #[must_use]
     fn get(&self, index: usize) -> Option<&A> {
@@ -108,10 +95,7 @@ where
     }
 }
 
-impl<A, N> ArrayMut for RingBuffer<A, N>
-where
-    N: ChunkLength<A>,
-{
+impl<A, const N: usize> ArrayMut for RingBuffer<A, N> {
     /// Get a mutable reference to the value at a given index.
     #[must_use]
     fn get_mut(&mut self, index: usize) -> Option<&mut A> {
@@ -123,12 +107,9 @@ where
     }
 }
 
-impl<A, N> RingBuffer<A, N>
-where
-    N: ChunkLength<A>,
-{
+impl<A, const N: usize> RingBuffer<A, N> {
     /// The capacity of this ring buffer, as a `usize`.
-    pub const CAPACITY: usize = N::USIZE;
+    pub const CAPACITY: usize = N;
 
     /// Get the raw index for a logical index.
     #[inline]
@@ -175,7 +156,7 @@ where
         count: usize,
     ) {
         #[inline]
-        unsafe fn force_copy_to<A, N: ChunkLength<A>>(
+        unsafe fn force_copy_to<A, const N: usize>(
             source: &mut RingBuffer<A, N>,
             from: RawIndex<N>,
             target: &mut RingBuffer<A, N>,
@@ -642,17 +623,6 @@ where
     ///
     /// Time: O(log n) to find the insert position, then O(n) for the number
     /// of elements shifted.
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// # use std::iter::FromIterator;
-    /// # use sized_chunks::Chunk;
-    /// # use typenum::U64;
-    /// let mut chunk = Chunk::<i32, U64>::from_iter(0..5);
-    /// chunk.insert_ordered(3);
-    /// assert_eq!(&[0, 1, 2, 3, 3, 4], chunk.as_slice());
-    /// ```
     pub fn insert_ordered(&mut self, value: A)
     where
         A: Ord,
@@ -788,7 +758,7 @@ where
     }
 }
 
-impl<A, N: ChunkLength<A>> Default for RingBuffer<A, N> {
+impl<A, const N: usize> Default for RingBuffer<A, N> {
     #[inline]
     #[must_use]
     fn default() -> Self {
@@ -796,7 +766,7 @@ impl<A, N: ChunkLength<A>> Default for RingBuffer<A, N> {
     }
 }
 
-impl<A: Clone, N: ChunkLength<A>> Clone for RingBuffer<A, N> {
+impl<A: Clone, const N: usize> Clone for RingBuffer<A, N> {
     fn clone(&self) -> Self {
         let mut out = Self::new();
         out.origin = self.origin;
@@ -812,10 +782,7 @@ impl<A: Clone, N: ChunkLength<A>> Clone for RingBuffer<A, N> {
     }
 }
 
-impl<A, N> Index<usize> for RingBuffer<A, N>
-where
-    N: ChunkLength<A>,
-{
+impl<A, const N: usize> Index<usize> for RingBuffer<A, N> {
     type Output = A;
 
     #[must_use]
@@ -831,10 +798,7 @@ where
     }
 }
 
-impl<A, N> IndexMut<usize> for RingBuffer<A, N>
-where
-    N: ChunkLength<A>,
-{
+impl<A, const N: usize> IndexMut<usize> for RingBuffer<A, N> {
     #[must_use]
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
         if index >= self.len() {
@@ -848,7 +812,7 @@ where
     }
 }
 
-impl<A: PartialEq, N: ChunkLength<A>> PartialEq for RingBuffer<A, N> {
+impl<A: PartialEq, const N: usize> PartialEq for RingBuffer<A, N> {
     #[inline]
     #[must_use]
     fn eq(&self, other: &Self) -> bool {
@@ -856,11 +820,10 @@ impl<A: PartialEq, N: ChunkLength<A>> PartialEq for RingBuffer<A, N> {
     }
 }
 
-impl<A, N, PrimSlice> PartialEq<PrimSlice> for RingBuffer<A, N>
+impl<A, PrimSlice, const N: usize> PartialEq<PrimSlice> for RingBuffer<A, N>
 where
     PrimSlice: Borrow<[A]>,
     A: PartialEq,
-    N: ChunkLength<A>,
 {
     #[inline]
     #[must_use]
@@ -870,29 +833,27 @@ where
     }
 }
 
-impl<A, N> PartialEq<Slice<'_, A, N>> for RingBuffer<A, N>
+impl<A, const N: usize> PartialEq<Slice<'_, A, N>> for RingBuffer<A, N>
 where
     A: PartialEq,
-    N: ChunkLength<A>,
 {
     fn eq(&self, other: &Slice<'_, A, N>) -> bool {
         self.len() == other.len() && self.iter().eq(other.iter())
     }
 }
 
-impl<A, N> PartialEq<SliceMut<'_, A, N>> for RingBuffer<A, N>
+impl<A, const N: usize> PartialEq<SliceMut<'_, A, N>> for RingBuffer<A, N>
 where
     A: PartialEq,
-    N: ChunkLength<A>,
 {
     fn eq(&self, other: &SliceMut<'_, A, N>) -> bool {
         self.len() == other.len() && self.iter().eq(other.iter())
     }
 }
 
-impl<A: Eq, N: ChunkLength<A>> Eq for RingBuffer<A, N> {}
+impl<A: Eq, const N: usize> Eq for RingBuffer<A, N> {}
 
-impl<A: PartialOrd, N: ChunkLength<A>> PartialOrd for RingBuffer<A, N> {
+impl<A: PartialOrd, const N: usize> PartialOrd for RingBuffer<A, N> {
     #[inline]
     #[must_use]
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
@@ -900,7 +861,7 @@ impl<A: PartialOrd, N: ChunkLength<A>> PartialOrd for RingBuffer<A, N> {
     }
 }
 
-impl<A: Ord, N: ChunkLength<A>> Ord for RingBuffer<A, N> {
+impl<A: Ord, const N: usize> Ord for RingBuffer<A, N> {
     #[inline]
     #[must_use]
     fn cmp(&self, other: &Self) -> Ordering {
@@ -908,7 +869,7 @@ impl<A: Ord, N: ChunkLength<A>> Ord for RingBuffer<A, N> {
     }
 }
 
-impl<A, N: ChunkLength<A>> Extend<A> for RingBuffer<A, N> {
+impl<A, const N: usize> Extend<A> for RingBuffer<A, N> {
     #[inline]
     fn extend<I: IntoIterator<Item = A>>(&mut self, iter: I) {
         for item in iter {
@@ -917,7 +878,7 @@ impl<A, N: ChunkLength<A>> Extend<A> for RingBuffer<A, N> {
     }
 }
 
-impl<'a, A: Clone + 'a, N: ChunkLength<A>> Extend<&'a A> for RingBuffer<A, N> {
+impl<'a, A: Clone + 'a, const N: usize> Extend<&'a A> for RingBuffer<A, N> {
     #[inline]
     fn extend<I: IntoIterator<Item = &'a A>>(&mut self, iter: I) {
         for item in iter {
@@ -926,14 +887,14 @@ impl<'a, A: Clone + 'a, N: ChunkLength<A>> Extend<&'a A> for RingBuffer<A, N> {
     }
 }
 
-impl<A: Debug, N: ChunkLength<A>> Debug for RingBuffer<A, N> {
+impl<A: Debug, const N: usize> Debug for RingBuffer<A, N> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
         f.write_str("RingBuffer")?;
         f.debug_list().entries(self.iter()).finish()
     }
 }
 
-impl<A: Hash, N: ChunkLength<A>> Hash for RingBuffer<A, N> {
+impl<A: Hash, const N: usize> Hash for RingBuffer<A, N> {
     #[inline]
     fn hash<H: Hasher>(&self, hasher: &mut H) {
         for item in self {
@@ -943,7 +904,7 @@ impl<A: Hash, N: ChunkLength<A>> Hash for RingBuffer<A, N> {
 }
 
 #[cfg(feature = "std")]
-impl<N: ChunkLength<u8>> std::io::Write for RingBuffer<u8, N> {
+impl<const N: usize> std::io::Write for RingBuffer<u8, N> {
     fn write(&mut self, mut buf: &[u8]) -> std::io::Result<usize> {
         let max_new = Self::CAPACITY - self.len();
         if buf.len() > max_new {
@@ -961,7 +922,7 @@ impl<N: ChunkLength<u8>> std::io::Write for RingBuffer<u8, N> {
 }
 
 #[cfg(feature = "std")]
-impl<N: ChunkLength<u8>> std::io::Read for RingBuffer<u8, N> {
+impl<const N: usize> std::io::Read for RingBuffer<u8, N> {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
         let read_size = buf.len().min(self.len());
         if read_size == 0 {
@@ -975,7 +936,7 @@ impl<N: ChunkLength<u8>> std::io::Read for RingBuffer<u8, N> {
     }
 }
 
-impl<A, N: ChunkLength<A>> FromIterator<A> for RingBuffer<A, N> {
+impl<A, const N: usize> FromIterator<A> for RingBuffer<A, N> {
     #[must_use]
     fn from_iter<I: IntoIterator<Item = A>>(iter: I) -> Self {
         let mut buffer = RingBuffer::new();
@@ -984,7 +945,7 @@ impl<A, N: ChunkLength<A>> FromIterator<A> for RingBuffer<A, N> {
     }
 }
 
-impl<A, N: ChunkLength<A>> IntoIterator for RingBuffer<A, N> {
+impl<A, const N: usize> IntoIterator for RingBuffer<A, N> {
     type Item = A;
     type IntoIter = OwnedIter<A, N>;
 
@@ -995,7 +956,7 @@ impl<A, N: ChunkLength<A>> IntoIterator for RingBuffer<A, N> {
     }
 }
 
-impl<'a, A, N: ChunkLength<A>> IntoIterator for &'a RingBuffer<A, N> {
+impl<'a, A, const N: usize> IntoIterator for &'a RingBuffer<A, N> {
     type Item = &'a A;
     type IntoIter = Iter<'a, A, N>;
 
@@ -1006,7 +967,7 @@ impl<'a, A, N: ChunkLength<A>> IntoIterator for &'a RingBuffer<A, N> {
     }
 }
 
-impl<'a, A, N: ChunkLength<A>> IntoIterator for &'a mut RingBuffer<A, N> {
+impl<'a, A, const N: usize> IntoIterator for &'a mut RingBuffer<A, N> {
     type Item = &'a mut A;
     type IntoIter = IterMut<'a, A, N>;
 
@@ -1021,18 +982,16 @@ impl<'a, A, N: ChunkLength<A>> IntoIterator for &'a mut RingBuffer<A, N> {
 
 #[cfg(test)]
 mod test {
-    use typenum::U0;
-
     use super::*;
 
     #[test]
     fn validity_invariant() {
-        assert!(Some(RingBuffer::<Box<()>>::new()).is_some());
+        assert!(Some(RingBuffer::<Box<()>, 64>::new()).is_some());
     }
 
     #[test]
     fn is_full() {
-        let mut chunk = RingBuffer::<_, U64>::new();
+        let mut chunk = RingBuffer::<_, 64>::new();
         for i in 0..64 {
             assert_eq!(false, chunk.is_full());
             chunk.push_back(i);
@@ -1042,7 +1001,7 @@ mod test {
 
     #[test]
     fn ref_iter() {
-        let chunk: RingBuffer<i32> = (0..64).collect();
+        let chunk: RingBuffer<i32, 64> = (0..64).collect();
         let out_vec: Vec<&i32> = chunk.iter().collect();
         let should_vec_p: Vec<i32> = (0..64).collect();
         let should_vec: Vec<&i32> = should_vec_p.iter().collect();
@@ -1051,7 +1010,7 @@ mod test {
 
     #[test]
     fn mut_ref_iter() {
-        let mut chunk: RingBuffer<i32> = (0..64).collect();
+        let mut chunk: RingBuffer<i32, 64> = (0..64).collect();
         let out_vec: Vec<&mut i32> = chunk.iter_mut().collect();
         let mut should_vec_p: Vec<i32> = (0..64).collect();
         let should_vec: Vec<&mut i32> = should_vec_p.iter_mut().collect();
@@ -1060,7 +1019,7 @@ mod test {
 
     #[test]
     fn consuming_iter() {
-        let chunk: RingBuffer<i32> = (0..64).collect();
+        let chunk: RingBuffer<i32, 64> = (0..64).collect();
         let out_vec: Vec<i32> = chunk.into_iter().collect();
         let should_vec: Vec<i32> = (0..64).collect();
         assert_eq!(should_vec, out_vec);
@@ -1068,8 +1027,8 @@ mod test {
 
     #[test]
     fn draining_iter() {
-        let mut chunk: RingBuffer<i32> = (0..64).collect();
-        let mut half: RingBuffer<i32> = chunk.drain().take(16).collect();
+        let mut chunk: RingBuffer<i32, 64> = (0..64).collect();
+        let mut half: RingBuffer<i32, 64> = chunk.drain().take(16).collect();
         half.extend(chunk.drain().rev().take(16));
         let should: Vec<i32> = (16..48).collect();
         assert_eq!(chunk, should);
@@ -1081,7 +1040,7 @@ mod test {
     #[test]
     fn io_write() {
         use std::io::Write;
-        let mut buffer: RingBuffer<u8> = (0..32).collect();
+        let mut buffer: RingBuffer<u8, 64> = (0..32).collect();
         let to_write: Vec<u8> = (32..128).collect();
         assert_eq!(32, buffer.write(&to_write).unwrap());
         assert_eq!(buffer, (0..64).collect::<Vec<u8>>());
@@ -1091,7 +1050,7 @@ mod test {
     #[test]
     fn io_read() {
         use std::io::Read;
-        let mut buffer: RingBuffer<u8> = (16..48).collect();
+        let mut buffer: RingBuffer<u8, 64> = (16..48).collect();
         let mut read_buf: Vec<u8> = (0..16).collect();
         assert_eq!(16, buffer.read(&mut read_buf).unwrap());
         assert_eq!(read_buf, (16..32).collect::<Vec<u8>>());
@@ -1104,15 +1063,15 @@ mod test {
 
     #[test]
     fn clone() {
-        let buffer: RingBuffer<u32> = (0..50).collect();
+        let buffer: RingBuffer<u32, 64> = (0..50).collect();
         assert_eq!(buffer, buffer.clone());
     }
 
     #[test]
     fn failing() {
-        let mut buffer: RingBuffer<u32> = RingBuffer::new();
+        let mut buffer: RingBuffer<u32, 64> = RingBuffer::new();
         buffer.push_front(0);
-        let mut add: RingBuffer<u32> = vec![1, 0, 0, 0, 0, 0].into_iter().collect();
+        let mut add: RingBuffer<u32, 64> = vec![1, 0, 0, 0, 0, 0].into_iter().collect();
         buffer.append(&mut add);
         assert_eq!(1, buffer.remove(1));
         let expected = vec![0, 0, 0, 0, 0, 0];
@@ -1126,7 +1085,7 @@ mod test {
     fn dropping() {
         let counter = AtomicUsize::new(0);
         {
-            let mut chunk: RingBuffer<DropTest<'_>> = RingBuffer::new();
+            let mut chunk: RingBuffer<DropTest<'_>, 64> = RingBuffer::new();
             for _i in 0..20 {
                 chunk.push_back(DropTest::new(&counter))
             }
@@ -1145,12 +1104,12 @@ mod test {
     #[test]
     #[should_panic(expected = "assertion failed: Self::CAPACITY >= 1")]
     fn unit_on_empty() {
-        let _ = RingBuffer::<usize, U0>::unit(1);
+        let _ = RingBuffer::<usize, 0>::unit(1);
     }
 
     #[test]
     #[should_panic(expected = "assertion failed: Self::CAPACITY >= 2")]
     fn pair_on_empty() {
-        let _ = RingBuffer::<usize, U0>::pair(1, 2);
+        let _ = RingBuffer::<usize, 0>::pair(1, 2);
     }
 }
