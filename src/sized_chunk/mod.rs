@@ -76,7 +76,7 @@ mod refpool;
 /// # Examples
 ///
 /// ```rust
-/// # use sized_chunks::Chunk;
+/// # use imbl_sized_chunks::Chunk;
 /// // Construct a chunk with a 64 item capacity
 /// let mut chunk = Chunk::<i32, 64>::new();
 /// // Fill it with descending numbers
@@ -565,7 +565,7 @@ impl<A, const N: usize> Chunk<A, N> {
     ///
     /// ```rust
     /// # use std::iter::FromIterator;
-    /// # use sized_chunks::Chunk;
+    /// # use imbl_sized_chunks::Chunk;
     /// let mut chunk = Chunk::<i32, 64>::from_iter(0..5);
     /// chunk.insert_ordered(3);
     /// assert_eq!(&[0, 1, 2, 3, 3, 4], chunk.as_slice());

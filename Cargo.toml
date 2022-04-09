@@ -1,12 +1,12 @@
 [package]
-name = "sized-chunks"
-version = "0.6.5"
-authors = ["Bodil Stokke <bodil@bodil.org>"]
+name = "imbl-sized-chunks"
+version = "0.1.0"
+authors = ["Bodil Stokke <bodil@bodil.org>", "Joe Neeman <joeneeman@gmail.com>"]
 edition = "2018"
 license = "MPL-2.0+"
 description = "Efficient sized chunk datatypes"
-repository = "https://github.com/bodil/sized-chunks"
-documentation = "http://docs.rs/sized-chunks"
+repository = "https://github.com/jneem/imbl-sized-chunks"
+documentation = "http://docs.rs/imbl-sized-chunks"
 readme = "./README.md"
 categories = ["data-structures"]
 keywords = ["sparse-array"]

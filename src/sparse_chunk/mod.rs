@@ -35,7 +35,7 @@ mod refpool;
 /// # Examples
 ///
 /// ```rust
-/// # use sized_chunks::SparseChunk;
+/// # use imbl_sized_chunks::SparseChunk;
 /// // Construct a chunk with a 20 item capacity
 /// let mut chunk = SparseChunk::<i32, 20>::new();
 /// // Set the 18th index to the value 5.
