@@ -34,8 +34,8 @@ terms.
 
 ## Acknowledgement
 
-This crate was forked from [`sized-chunks`], which is where basicaly all of the work was done.
+This crate was forked from [`sized-chunks`](https://crates.io/crates/sized-chunks),
+which is where basicaly all of the work was done.
 
 [imbl]: https://crates.io/crates/imbl
 [coc]: https://github.com/jneem/imbl-sized-chunks/blob/master/CODE_OF_CONDUCT.md
-[`sized_chunks`]: https://crates.io/crates/sized-chunks
