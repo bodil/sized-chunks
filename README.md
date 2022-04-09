@@ -20,6 +20,7 @@ auditing.
 ## Licence
 
 Copyright 2019 Bodil Stokke
+
 Copyright 2022 Joe Neeman
 
 This software is subject to the terms of the Mozilla Public
