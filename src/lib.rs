@@ -99,8 +99,6 @@
 #![warn(unreachable_pub, missing_docs)]
 #![cfg_attr(test, deny(warnings))]
 #![cfg_attr(not(any(feature = "std", test)), no_std)]
-// Jeremy Francis Corbyn, clippy devs need to calm down 🤦‍♀️
-#![allow(clippy::suspicious_op_assign_impl, clippy::suspicious_arithmetic_impl)]
 
 pub mod inline_array;
 pub mod sized_chunk;
@@ -120,3 +118,29 @@ pub use crate::sparse_chunk::SparseChunk;
 pub mod ring_buffer;
 #[cfg(feature = "ringbuffer")]
 pub use crate::ring_buffer::RingBuffer;
+
+#[cfg(test)]
+mod covariance_tests {
+    #![allow(unused_assignments, unused_variables, dead_code)]
+
+    use super::*;
+
+    // Check that all our types are covariant in their parameter.
+    macro_rules! assert_covariant {
+        ($name:ty, $param:ident) => {
+            const _: () = {
+                type Tmp<$param> = $name;
+                fn assign<'a, 'b: 'a>(src: Tmp<&'b i32>, mut dst: Tmp<&'a i32>) {
+                    dst = src;
+                }
+            };
+        };
+    }
+
+    assert_covariant!(InlineArray<T, Vec<T>>, T);
+    assert_covariant!(Chunk<T, 64>, T);
+    assert_covariant!(SparseChunk<T, 64>, T);
+
+    #[cfg(feature = "ringbuffer")]
+    assert_covariant!(RingBuffer<T, 64>, T);
+}
