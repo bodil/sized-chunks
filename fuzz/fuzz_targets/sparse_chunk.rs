@@ -6,7 +6,7 @@ use std::fmt::Debug;
 use arbitrary::Arbitrary;
 use libfuzzer_sys::fuzz_target;
 
-use sized_chunks::SparseChunk;
+use imbl_sized_chunks::SparseChunk;
 
 mod assert;
 use assert::assert_panic;

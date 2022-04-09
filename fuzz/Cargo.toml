@@ -13,7 +13,7 @@ array-ops = "0.1.0"
 libfuzzer-sys = "0.4.0"
 arbitrary = { version = "1.0.0", features = ["derive"] }
 
-[dependencies.sized-chunks]
+[dependencies.imbl-sized-chunks]
 path = ".."
 features = ["arbitrary", "ringbuffer"]
 

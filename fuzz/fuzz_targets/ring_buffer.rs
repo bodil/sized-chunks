@@ -8,7 +8,7 @@ use arbitrary::Arbitrary;
 use array_ops::{ArrayMut, HasLength};
 use libfuzzer_sys::fuzz_target;
 
-use sized_chunks::RingBuffer;
+use imbl_sized_chunks::RingBuffer;
 
 mod assert;
 use assert::assert_panic;

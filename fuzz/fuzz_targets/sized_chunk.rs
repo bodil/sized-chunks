@@ -6,7 +6,7 @@ use std::iter::FromIterator;
 use arbitrary::Arbitrary;
 use libfuzzer_sys::fuzz_target;
 
-use sized_chunks::Chunk;
+use imbl_sized_chunks::Chunk;
 
 mod assert;
 use assert::assert_panic;

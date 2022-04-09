@@ -8,11 +8,8 @@
 //! primarily intended for use in [immutable.rs], but fully supported as a
 //! standalone crate.
 //!
-//! Their sizing information is encoded in the type using the
-//! [`typenum`][typenum] crate, which you may want to take a look at before
-//! reading on, but usually all you need to know about it is that it provides
-//! types `U1` to `U128` to represent numbers, which the data types take as type
-//! parameters, eg. `SparseChunk<A, U32>` would give you a sparse array with
+//! Their sizing information is encoded in the type using const generics.
+//! For example, `SparseChunk<A, 32>` would give you a sparse array with
 //! room for 32 elements of type `A`. You can also omit the size, as they all
 //! default to a size of 64, so `SparseChunk<A>` would be a sparse array with a
 //! capacity of 64.
@@ -69,7 +66,7 @@
 //! and at least one instance of the array element type. This can be a useful
 //! optimisation when implementing a list like data structure with a nontrivial
 //! set of pointers in its full form, where you could plausibly fit several
-//! elements inside the space allocated for the pointers. `im::Vector` is a
+//! elements inside the space allocated for the pointers. `imbl::Vector` is a
 //! good example of that, and the use case for which [`InlineArray`][InlineArray]
 //! was implemented.
 //!
@@ -86,10 +83,10 @@
 //!
 //! [immutable.rs]: https://immutable.rs/
 //! [typenum]: https://docs.rs/typenum/
-//! [Chunk]: struct.Chunk.html
-//! [RingBuffer]: struct.RingBuffer.html
-//! [SparseChunk]: struct.SparseChunk.html
-//! [InlineArray]: struct.InlineArray.html
+//! [Chunk]: crate::Chunk
+//! [RingBuffer]: crate::RingBuffer
+//! [SparseChunk]: crate::SparseChunk
+//! [InlineArray]: crate::InlineArray
 //! [ArrayVec]: https://docs.rs/arrayvec/
 //! [Arbitrary]: https://docs.rs/arbitrary/latest/arbitrary/trait.Arbitrary.html
 //! [arbitrary_crate]: https://docs.rs/arbitrary

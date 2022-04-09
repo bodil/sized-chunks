@@ -5,7 +5,7 @@ use std::fmt::Debug;
 use arbitrary::Arbitrary;
 use libfuzzer_sys::fuzz_target;
 
-use sized_chunks::InlineArray;
+use imbl_sized_chunks::InlineArray;
 
 mod assert;
 use assert::assert_panic;
