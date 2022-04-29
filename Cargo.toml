@@ -1,6 +1,6 @@
 [package]
 name = "sized-chunks"
-version = "0.6.5"
+version = "0.7.0"
 authors = ["Bodil Stokke <bodil@bodil.org>"]
 edition = "2018"
 rust-version = "1.51.0"
